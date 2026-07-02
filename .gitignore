@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.vercel/
+.netlify/
+.claude/
+netlify/
+.env
+.env.*.local
+.DS_Store
+__MACOSX/
+._*
+Thumbs.db
+desktop.ini
