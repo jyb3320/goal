@@ -1,5 +1,3 @@
-import crypto from "node:crypto";
-
 // 서버(Vercel 함수)와 vite 개발 서버가 함께 쓰는 순수 로직 모듈.
 // Redis 등 저장소 의존성은 여기 두지 않는다.
 
@@ -22,7 +20,6 @@ export function emptyState() {
     progress: [],
     reactions: [],
     messages: [],
-    tokens: {}, // name -> 비밀코드 (클라이언트 응답에서는 제거됨)
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
   };
@@ -62,15 +59,6 @@ export function newId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-function newToken() {
-  // 헷갈리는 문자(0/O, 1/I) 제외한 6자리 비밀코드
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  const bytes = crypto.randomBytes(6);
-  let out = "";
-  for (const b of bytes) out += chars[b % chars.length];
-  return out;
-}
-
 // 서버는 UTC로 돌지만 사용자는 한국 기준으로 하루를 산다
 export function seoulToday(offsetDays = 0) {
   const d = new Date(Date.now() + offsetDays * 86400000);
@@ -99,7 +87,7 @@ export function normalize(raw) {
   for (const key of ["users", "goals", "checkins", "progress", "reactions", "messages"]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
-  for (const key of ["tokens", "push", "archive"]) {
+  for (const key of ["push", "archive"]) {
     if (!s[key] || typeof s[key] !== "object" || Array.isArray(s[key])) s[key] = {};
   }
   if (s.users.length === 0 && s.goals.length > 0) {
@@ -111,16 +99,17 @@ export function normalize(raw) {
 
 // 클라이언트로 나가면 안 되는 필드 제거
 export function sanitize(state) {
-  const { tokens, push, ...pub } = state;
+  const { push, ...pub } = state;
   return pub;
 }
 
+// 둘이서만 쓰는 개인 앱이라 비밀번호 없이 이름만으로 신원을 확인한다.
+// (누구든 이름을 알면 그 사람 행세를 할 수 있다는 뜻 — 링크를 아는 두 사람만
+// 쓴다는 전제하에 받아들인 트레이드오프. 서버는 여전히 소유권 검증은 한다:
+// 내 목표에만 도장/기록/삭제 가능, 친구 목표에만 응원 가능, 도장은 오늘/어제만.)
 function authenticate(state, body) {
   const name = str(body.name, 20);
-  const token = str(body.token, 40);
-  if (!name || !token) return null;
-  if (!state.users.includes(name)) return null;
-  if (state.tokens[name] !== token) return null;
+  if (!name || !state.users.includes(name)) return null;
   return name;
 }
 
@@ -313,30 +302,15 @@ export function handlePost(rawState, body) {
 
   if (action === "join") {
     const name = str(body.name, 20);
-    const token = str(body.token, 40);
     if (!name) return { status: 400, respond: { error: "이름이 비어 있어요" } };
-
     if (state.users.includes(name)) {
-      const stored = state.tokens[name];
-      if (stored && stored === token) {
-        return { status: 200, respond: sanitize(state) };
-      }
-      if (!stored) {
-        // 인증 도입 전에 가입한 사용자 — 처음 다시 접속할 때 코드 발급
-        const t = newToken();
-        state.tokens[name] = t;
-        return { status: 200, respond: { ...sanitize(state), token: t, tokenIssued: true }, state, write: true };
-      }
-      return { status: 403, respond: { error: "code" } };
+      return { status: 200, respond: sanitize(state) };
     }
-
     if (state.users.length >= MAX_USERS) {
       return { status: 403, respond: { error: "full", users: state.users } };
     }
-    const t = newToken();
     state.users.push(name);
-    state.tokens[name] = t;
-    return { status: 200, respond: { ...sanitize(state), token: t, tokenIssued: true }, state, write: true };
+    return { status: 200, respond: sanitize(state), state, write: true };
   }
 
   const user = authenticate(state, body);

@@ -26,23 +26,15 @@ function pickState(data) {
   };
 }
 
-// 비밀코드는 이름별로 보관 — "다른 이름으로" 나갔다 와도 코드 재입력이 필요 없게
-function tokenFor(name) {
-  return localStorage.getItem(`sg_token:${name}`) || "";
-}
-
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
   const [view, setView] = useState("board"); // 'board' | 'village' | 'history'
   const [nameInput, setNameInput] = useState("");
-  const [codeInput, setCodeInput] = useState("");
-  const [needCode, setNeedCode] = useState(false);
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
   const [dismissedReminder, setDismissedReminder] = useState(false);
-  const [codeBanner, setCodeBanner] = useState(null); // 새 기기 로그인용 비밀코드 안내
   const [pushKey, setPushKey] = useState(null);
   const [pushOn, setPushOn] = useState(false);
   const [toast, setToast] = useState(null);
@@ -62,7 +54,6 @@ export default function App() {
     setMe("");
     setState(EMPTY_STATE);
     setLoaded(false);
-    setCodeBanner(null);
   };
 
   const load = async () => {
@@ -88,7 +79,7 @@ export default function App() {
       const res = await fetch(API, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...payload, name: me, token: tokenFor(me) }),
+        body: JSON.stringify({ ...payload, name: me }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -115,25 +106,18 @@ export default function App() {
     return ok;
   };
 
-  const join = async (name, code) => {
+  const join = async (name) => {
     try {
       const res = await fetch(API, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "join", name, token: code || tokenFor(name) }),
+        body: JSON.stringify({ action: "join", name }),
       });
       const data = await res.json();
       if (!res.ok) {
         if (data.error === "full") {
           setGateError(
             `이 도장판은 이미 두 명(${(data.users || []).join(", ")})이 쓰고 있어요. 둘 중 하나의 이름으로 들어와야 해요.`
-          );
-        } else if (data.error === "code") {
-          setNeedCode(true);
-          setGateError(
-            code
-              ? "비밀코드가 맞지 않아요. 처음 가입한 기기에서 코드를 확인해줘."
-              : "이 이름에는 비밀코드가 걸려 있어요. 코드를 입력해줘."
           );
         } else {
           setGateError(data.error || "접속에 실패했어요. 다시 시도해줘.");
@@ -142,12 +126,8 @@ export default function App() {
         setMe("");
         return;
       }
-      if (data.token) localStorage.setItem(`sg_token:${name}`, data.token);
-      if (data.tokenIssued) setCodeBanner(data.token);
       localStorage.setItem("sg_username", name);
       setGateError("");
-      setNeedCode(false);
-      setCodeInput("");
       setMe(name);
       setState(pickState(data));
       setLoaded(true);
@@ -290,7 +270,7 @@ export default function App() {
     e.preventDefault();
     const trimmed = nameInput.trim();
     if (!trimmed) return;
-    join(trimmed, codeInput.trim() || undefined);
+    join(trimmed);
   };
 
   const addGoal = (goal) => {
@@ -357,24 +337,11 @@ export default function App() {
             placeholder="이름 (예: 햄)"
             autoFocus
           />
-          {needCode && (
-            <input
-              value={codeInput}
-              onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
-              placeholder="비밀코드 (예: AB3CD9)"
-              maxLength={10}
-              autoCapitalize="characters"
-            />
-          )}
           {gateError && <div className="gate-error">{gateError}</div>}
           <button type="submit" className="btn-primary">
             시작하기
           </button>
-          <div className="gate-hint">
-            같은 링크를 친구한테 보내고, 친구는 친구 이름으로 시작하면 됨.
-            <br />
-            처음 시작하면 비밀코드가 나와요 — 다른 기기에서 들어올 때 필요하니 저장해둬.
-          </div>
+          <div className="gate-hint">같은 링크를 친구한테 보내고, 친구는 친구 이름으로 시작하면 됨</div>
         </form>
       </div>
     );
@@ -419,9 +386,6 @@ export default function App() {
         </h1>
         <div className="who">
           {me}로 접속 중
-          <button onClick={() => setCodeBanner(tokenFor(me) || null)} type="button">
-            내 비밀코드
-          </button>
           <button onClick={logout} type="button">
             다른 이름으로
           </button>
@@ -438,18 +402,6 @@ export default function App() {
           </button>
         )}
       </div>
-
-      {codeBanner && (
-        <div className="code-banner">
-          <span>
-            🔑 비밀코드: <strong>{codeBanner}</strong> — 다른 기기에서 이 이름으로 들어올 때 필요해요.
-            스크린샷 찍어둬!
-          </span>
-          <button type="button" onClick={() => setCodeBanner(null)} aria-label="닫기">
-            ✕
-          </button>
-        </div>
-      )}
 
       <div className="view-tabs">
         <button type="button" className={view === "board" ? "active" : ""} onClick={() => setView("board")}>

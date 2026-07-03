@@ -22,91 +22,84 @@ function freshBoard() {
 
 function twoUsers() {
   const b = freshBoard();
-  const t1 = b.post({ action: "join", name: "햄" }).respond.token;
-  const t2 = b.post({ action: "join", name: "쥐" }).respond.token;
-  const goal = b.post({ action: "addGoal", name: "햄", token: t1, goal: { title: "달리기" } })
-    .respond.goals[0];
-  return { b, t1, t2, goal };
+  b.post({ action: "join", name: "햄" });
+  b.post({ action: "join", name: "쥐" });
+  const goal = b.post({ action: "addGoal", name: "햄", goal: { title: "달리기" } }).respond.goals[0];
+  return { b, goal };
 }
 
-describe("인증", () => {
-  it("join 시 비밀코드 발급, 2명 제한", () => {
+describe("접속 (이름만, 비밀번호 없음)", () => {
+  it("join으로 자리 차지, 2명 제한", () => {
     const b = freshBoard();
-    const r1 = b.post({ action: "join", name: "햄" });
-    expect(r1.status).toBe(200);
-    expect(r1.respond.token).toMatch(/^[A-Z2-9]{6}$/);
+    expect(b.post({ action: "join", name: "햄" }).status).toBe(200);
     expect(b.post({ action: "join", name: "쥐" }).status).toBe(200);
     const r3 = b.post({ action: "join", name: "셋째" });
     expect(r3.status).toBe(403);
     expect(r3.respond.error).toBe("full");
   });
 
-  it("맞는 코드로 재접속 가능, 틀리면 거부", () => {
-    const b = freshBoard();
-    const token = b.post({ action: "join", name: "햄" }).respond.token;
-    expect(b.post({ action: "join", name: "햄", token }).status).toBe(200);
-    const bad = b.post({ action: "join", name: "햄", token: "WRONG9" });
-    expect(bad.status).toBe(403);
-    expect(bad.respond.error).toBe("code");
-  });
-
-  it("토큰 없이는 어떤 액션도 불가 (이름 사칭 차단)", () => {
+  it("이미 쓰는 이름으로 재접속하면 그대로 통과", () => {
     const b = freshBoard();
     b.post({ action: "join", name: "햄" });
-    const r = b.post({ action: "addGoal", name: "햄", goal: { title: "달리기" } });
+    expect(b.post({ action: "join", name: "햄" }).status).toBe(200);
+  });
+
+  it("등록 안 된 이름으로는 어떤 액션도 불가", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const r = b.post({ action: "addGoal", name: "모르는사람", goal: { title: "달리기" } });
     expect(r.status).toBe(401);
   });
 
-  it("응답에 토큰/푸시 구독이 새지 않음", () => {
+  it("응답에 푸시 구독이 새지 않음", () => {
     const b = freshBoard();
     const r = b.post({ action: "join", name: "햄" });
-    expect(r.respond.tokens).toBeUndefined();
     expect(r.respond.push).toBeUndefined();
   });
 });
 
 describe("소유권과 날짜 검증", () => {
   it("남의 목표에 도장 불가", () => {
-    const { b, t2, goal } = twoUsers();
+    const { b, goal } = twoUsers();
     const r = b.post({
-      action: "toggleCheckin", name: "쥐", token: t2, goalId: goal.id, date: seoulToday(),
+      action: "toggleCheckin", name: "쥐", goalId: goal.id, date: seoulToday(),
     });
     expect(r.status).toBe(403);
   });
 
   it("오늘/어제 도장만 허용 (소급 조작 차단)", () => {
-    const { b, t1, goal } = twoUsers();
+    const { b, goal } = twoUsers();
     const old = b.post({
-      action: "toggleCheckin", name: "햄", token: t1, goalId: goal.id, date: shiftDate(seoulToday(), -5),
+      action: "toggleCheckin", name: "햄", goalId: goal.id, date: shiftDate(seoulToday(), -5),
     });
     expect(old.status).toBe(400);
     const ok = b.post({
-      action: "toggleCheckin", name: "햄", token: t1, goalId: goal.id, date: seoulToday(),
+      action: "toggleCheckin", name: "햄", goalId: goal.id, date: seoulToday(),
     });
     expect(ok.status).toBe(200);
     expect(ok.respond.checkins).toHaveLength(1);
   });
 
   it("남의 목표 삭제 불가", () => {
-    const { b, t2, goal } = twoUsers();
-    expect(b.post({ action: "deleteGoal", name: "쥐", token: t2, goalId: goal.id }).status).toBe(403);
+    const { b, goal } = twoUsers();
+    expect(b.post({ action: "deleteGoal", name: "쥐", goalId: goal.id }).status).toBe(403);
   });
 
   it("자기 목표에 응원 불가, 친구는 가능 (by는 서버가 강제)", () => {
-    const { b, t1, t2, goal } = twoUsers();
+    const { b, goal } = twoUsers();
     expect(
-      b.post({ action: "toggleReaction", name: "햄", token: t1, goalId: goal.id, emoji: "🔥" }).status
+      b.post({ action: "toggleReaction", name: "햄", goalId: goal.id, emoji: "🔥" }).status
     ).toBe(403);
     const r = b.post({
-      action: "toggleReaction", name: "쥐", token: t2, goalId: goal.id, emoji: "🔥", by: "햄",
+      action: "toggleReaction", name: "쥐", goalId: goal.id, emoji: "🔥", by: "햄",
     });
     expect(r.status).toBe(200);
     expect(r.respond.reactions[0].by).toBe("쥐");
   });
 
   it("메시지 발신자는 서버가 강제", () => {
-    const { b, t2 } = twoUsers();
-    const r = b.post({ action: "addMessage", name: "쥐", token: t2, text: "화이팅", from: "햄" });
+    const { b } = twoUsers();
+    const r = b.post({ action: "addMessage", name: "쥐", text: "화이팅", from: "햄" });
     expect(r.respond.messages[0].from).toBe("쥐");
   });
 });

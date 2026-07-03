@@ -1090,41 +1090,7 @@ input:focus-visible {
   }
 }
 
-/* ---------- 비밀코드 배너 / 알림 버튼 ---------- */
-
-.code-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: rgba(46, 107, 94, 0.1);
-  border: 1px solid rgba(46, 107, 94, 0.4);
-  border-radius: var(--radius);
-  color: var(--teal);
-  font-size: 13px;
-  line-height: 1.6;
-  padding: 10px 14px;
-  margin-bottom: 20px;
-}
-
-.code-banner strong {
-  font-family: var(--font-mono);
-  letter-spacing: 0.1em;
-}
-
-.code-banner button {
-  background: none;
-  border: none;
-  color: var(--teal);
-  font-size: 13px;
-  padding: 2px 4px;
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
-.code-banner button:hover {
-  opacity: 1;
-}
+/* ---------- 알림 버튼 ---------- */
 
 .notify-btn {
   margin-left: 10px;
