@@ -310,6 +310,25 @@ input:focus-visible {
   border-radius: var(--radius);
   padding: 16px 16px 14px;
   position: relative;
+  box-shadow: 0 2px 8px rgba(36, 31, 24, 0.07), 0 1px 0 var(--line);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.goal-card.pop {
+  animation: card-pop 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes card-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.02) rotate(-0.4deg);
+    box-shadow: 0 6px 18px rgba(36, 31, 24, 0.14);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .goal-top {
@@ -401,6 +420,15 @@ input:focus-visible {
   border-style: solid;
   border-color: var(--stamp-red);
   background: radial-gradient(circle, rgba(181, 50, 40, 0.14) 0%, transparent 72%);
+  box-shadow: 0 0 0 3px rgba(181, 50, 40, 0.07);
+}
+
+.stamp-circle.clickable {
+  transition: transform 0.1s ease;
+}
+
+.stamp-circle.clickable:active {
+  transform: scale(0.86);
 }
 
 .stamp-circle.filled::after {
@@ -1087,6 +1115,142 @@ input:focus-visible {
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ---------- 게임 HUD (도장판 상단) ---------- */
+
+.hud-board {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  font-family: inherit;
+  box-shadow: 0 2px 8px rgba(36, 31, 24, 0.07), 0 1px 0 var(--line);
+  transition: transform 0.12s ease;
+  text-align: left;
+}
+
+.hud-board:active {
+  transform: scale(0.99);
+}
+
+.hud-lv {
+  background: linear-gradient(135deg, var(--stamp-red), var(--stamp-red-deep));
+  color: #fdf6e8;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 5px 11px;
+  border-radius: 13px;
+  box-shadow: 0 2px 5px rgba(138, 36, 29, 0.35);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hud-board-xp {
+  flex: 1;
+  height: 12px;
+  background: var(--paper-deep);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.hud-board-fill {
+  height: 100%;
+  min-width: 6px;
+  background: linear-gradient(90deg, var(--gold), var(--stamp-red));
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hud-board-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  animation: xp-shine 2.6s infinite;
+}
+
+@keyframes xp-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.hud-board-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.hud-board-today {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.hud-board-today.done {
+  color: var(--gold);
+}
+
+@media (max-width: 480px) {
+  .hud-board {
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .hud-board-meta span:last-child {
+    display: none;
+  }
+}
+
+/* ---------- 플로팅 텍스트 (+10 XP 등) ---------- */
+
+.fx-float {
+  position: fixed;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--stamp-red);
+  text-shadow:
+    0 1px 0 var(--paper-card),
+    0 0 6px var(--paper-card);
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  animation: fx-float-up 0.9s ease-out forwards;
+}
+
+@keyframes fx-float-up {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-48px) scale(1);
   }
 }
 

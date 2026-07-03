@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ddayLabel } from "../lib/dates.js";
+import { burst, bigBurst, stampSound, fanfareSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
 
 export default function MilestoneGoalCard({
@@ -18,6 +19,26 @@ export default function MilestoneGoalCard({
   const pct = Math.min(100, Math.round((current / goal.target) * 100));
   const done = current >= goal.target;
   const dday = ddayLabel(goal.deadline);
+
+  const record = (delta, e) => {
+    onAddProgress(goal.id, delta);
+    if (delta <= 0) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    burst(cx, cy, 14);
+    stampSound();
+    vibrate(15);
+    floatText(cx, cy - 16, `+${delta} ${goal.unit}`);
+    if (current < goal.target && current + delta >= goal.target) {
+      // 목표 달성 순간 — 팡파레
+      setTimeout(() => {
+        bigBurst();
+        fanfareSound();
+        vibrate([30, 50, 60]);
+      }, 250);
+    }
+  };
 
   return (
     <div className={`goal-card ${done ? "milestone-done" : ""}`}>
@@ -45,7 +66,7 @@ export default function MilestoneGoalCard({
         <div className="foot-right">
           {isMine && !done && (
             <div className="progress-controls">
-              <button type="button" className="amt-btn" onClick={() => onAddProgress(goal.id, -amount)} title="기록 되돌리기">
+              <button type="button" className="amt-btn" onClick={(e) => record(-amount, e)} title="기록 되돌리기">
                 −
               </button>
               <input
@@ -56,7 +77,7 @@ export default function MilestoneGoalCard({
                 onChange={(e) => setAmount(parseInt(e.target.value, 10))}
                 aria-label="기록할 수량"
               />
-              <button type="button" className="amt-btn plus" onClick={() => onAddProgress(goal.id, amount)} title="진행 기록하기">
+              <button type="button" className="amt-btn plus" onClick={(e) => record(amount, e)} title="진행 기록하기">
                 +
               </button>
             </div>

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Village from "./Village.jsx";
-import { computeXP, levelOf } from "./lib/xp.js";
+import { computeXP, levelOf, xpForLevel } from "./lib/xp.js";
 import { todayStr, weekDates } from "./lib/dates.js";
 import { pushSupported, subscribePush, currentSubscription } from "./lib/push.js";
+import { bigBurst, fanfareSound, vibrate } from "./lib/fx.js";
 import StampGoalCard from "./components/StampGoalCard.jsx";
 import MilestoneGoalCard from "./components/MilestoneGoalCard.jsx";
 import AddGoalForm from "./components/AddGoalForm.jsx";
@@ -266,6 +267,30 @@ export default function App() {
     return `밤 9시가 넘었어요 — 아직 안 찍은 도장이 ${missed.length}개 있어요!`;
   }, [myGoals, checkinSet, clock]);
 
+  // ----- 게임 HUD: XP / 레벨 / 오늘 진행률 -----
+  const myXP = computeXP(me, state);
+  const myLevel = levelOf(myXP);
+  const xpBase = xpForLevel(myLevel);
+  const xpNeed = xpForLevel(myLevel + 1) - xpBase;
+  const xpPct = Math.round(((myXP - xpBase) / xpNeed) * 100);
+  const todayStampGoals = myGoals.filter((g) => g.type !== "milestone");
+  const todayDone = todayStampGoals.filter((g) => checkinSet.has(`${g.id}_${todayStr(0)}`)).length;
+  const perfectToday = todayStampGoals.length > 0 && todayDone === todayStampGoals.length;
+
+  // 레벨업 축하 — 첫 로딩 때의 레벨은 기준선으로만 쓰고 축하하지 않음
+  const levelRef = useRef(null);
+  useEffect(() => {
+    if (!loaded) return;
+    if (levelRef.current !== null && myLevel > levelRef.current) {
+      bigBurst();
+      fanfareSound();
+      vibrate([30, 50, 30]);
+      showToast(`레벨 업! Lv.${myLevel} 🎉`);
+    }
+    levelRef.current = myLevel;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myLevel, loaded]);
+
   const submitName = (e) => {
     e.preventDefault();
     const trimmed = nameInput.trim();
@@ -291,6 +316,21 @@ export default function App() {
     const nextCheckins = exists
       ? state.checkins.filter((c) => !(c.goalId === goalId && c.date === date))
       : [...state.checkins, { goalId, date }];
+    // 이 도장으로 오늘 목표를 전부 채우면 올클리어 축하
+    if (!exists && date === todayStr(0)) {
+      const nextSet = new Set(nextCheckins.map((c) => `${c.goalId}_${c.date}`));
+      const allClear =
+        todayStampGoals.length > 0 &&
+        todayStampGoals.every((g) => nextSet.has(`${g.id}_${date}`));
+      if (allClear) {
+        setTimeout(() => {
+          bigBurst();
+          fanfareSound();
+          vibrate([20, 40, 20, 40, 60]);
+          showToast("오늘 도장 올클리어! ✨");
+        }, 300);
+      }
+    }
     mutate({ action: "toggleCheckin", goalId, date }, { ...state, checkins: nextCheckins });
   };
 
@@ -347,7 +387,6 @@ export default function App() {
     );
   }
 
-  const myLevel = levelOf(computeXP(me, state));
   const otherLevel = otherName ? levelOf(computeXP(otherName, state)) : null;
 
   const renderGoalCard = (goal, isMine) =>
@@ -429,6 +468,20 @@ export default function App() {
 
       {view === "board" && (
         <>
+          <button type="button" className="hud-board" onClick={() => setView("village")} title="마을 보러가기">
+            <span className="hud-lv">Lv.{myLevel}</span>
+            <div className="hud-board-xp">
+              <div className="hud-board-fill" style={{ width: `${xpPct}%` }} />
+            </div>
+            <div className="hud-board-meta">
+              <span className={`hud-board-today ${perfectToday ? "done" : ""}`}>
+                오늘 {todayDone}/{todayStampGoals.length}
+                {perfectToday && " ✨"}
+              </span>
+              <span>다음 레벨까지 {xpNeed - (myXP - xpBase)} XP · 마을 →</span>
+            </div>
+          </button>
+
           {reminder && !dismissedReminder && (
             <div className="reminder-banner">
               <span>⏰ {reminder}</span>

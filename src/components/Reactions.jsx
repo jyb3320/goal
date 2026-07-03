@@ -1,4 +1,5 @@
 import { todayStr, lastNSet } from "../lib/dates.js";
+import { burst, vibrate } from "../lib/fx.js";
 
 export const REACTIONS = [
   { emoji: "🔥", label: "응원" },
@@ -23,7 +24,15 @@ export default function Reactions({ goal, isMine, reactions, me, onToggle }) {
             key={r.emoji}
             type="button"
             className={`reaction-chip ${activeByMe ? "active" : ""}`}
-            onClick={() => !isMine && onToggle(goal.id, r.emoji)}
+            onClick={(e) => {
+              if (isMine) return;
+              if (!activeByMe) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                burst(rect.left + rect.width / 2, rect.top + rect.height / 2, 10);
+                vibrate(10);
+              }
+              onToggle(goal.id, r.emoji);
+            }}
             disabled={isMine}
             title={isMine ? "최근 7일간 받은 응원" : `${r.label} (최근 7일 합계)`}
           >
