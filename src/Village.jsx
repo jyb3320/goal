@@ -1,45 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
-
-// ---------- 경험치 / 레벨 ----------
-// 서버에 따로 저장하지 않고 도장 기록에서 그대로 계산한다:
-// 도장 1개 = 10 XP, 기간 목표 진행 = 수량당 2 XP, 완주 보너스 30 XP
-export function computeXP(user, state) {
-  const goals = state.goals.filter((g) => g.owner === user);
-  const ids = new Set(goals.map((g) => g.id));
-  let xp = state.checkins.filter((c) => ids.has(c.goalId)).length * 10;
-  for (const g of goals) {
-    if (g.type !== "milestone") continue;
-    const net = Math.max(
-      0,
-      state.progress.filter((p) => p.goalId === g.id).reduce((s, p) => s + p.amount, 0)
-    );
-    xp += Math.min(net, g.target) * 2;
-    if (net >= g.target) xp += 30;
-  }
-  return xp;
-}
-
-export function xpForLevel(level) {
-  return 25 * (level - 1) * level;
-}
-
-export function levelOf(xp) {
-  let level = 1;
-  while (xp >= xpForLevel(level + 1)) level++;
-  return level;
-}
-
-const UNLOCKS = [
-  [2, "새싹 머리띠"],
-  [3, "밀짚모자"],
-  [5, "목도리"],
-  [7, "망토"],
-  [10, "왕관"],
-];
-
-export function nextUnlock(level) {
-  return UNLOCKS.find(([lv]) => lv > level) || null;
-}
+import { computeXP, xpForLevel, levelOf, nextUnlock } from "./lib/xp.js";
 
 // ---------- 월드 상수 ----------
 const WORLD_W = 1400;
@@ -111,9 +71,14 @@ export default function Village({ state, me, otherName }) {
   const otherRef = useRef(otherName);
   otherRef.current = otherName;
 
+  // 컴팩션으로 아카이브된 옛 도장도 마을 식물로 남는다
+  const archivedStamps = Object.values(state.archive || {}).reduce(
+    (s, a) => s + (a.stamps || 0),
+    0
+  );
   const decorCount = Math.min(
     MAX_DECOR,
-    state.checkins.length + state.progress.filter((p) => p.amount > 0).length
+    archivedStamps + state.checkins.length + state.progress.filter((p) => p.amount > 0).length
   );
 
   const myXP = computeXP(me, state);
@@ -150,6 +115,7 @@ export default function Village({ state, me, otherName }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
+    const meName = me;
     let running = true;
     let raf = 0;
 
@@ -793,7 +759,6 @@ export default function Village({ state, me, otherName }) {
       }
     }
 
-    const meName = me;
     let prev = performance.now();
     function frame(now) {
       if (!running) return;

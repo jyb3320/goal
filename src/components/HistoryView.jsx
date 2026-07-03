@@ -1,0 +1,143 @@
+import { useMemo, useState } from "react";
+import { fmtDate, todayStr, DOW } from "../lib/dates.js";
+
+const MIN_OFFSET = -12; // 서버가 도장 기록을 약 1년만 원본으로 보관
+
+// 월간 달력 히트맵 + 목표별 합계
+export default function HistoryView({ goals, checkins, progress, me, otherName }) {
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [who, setWho] = useState(me);
+
+  const base = new Date();
+  base.setDate(1);
+  base.setMonth(base.getMonth() + monthOffset);
+  const year = base.getFullYear();
+  const month = base.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const lead = (new Date(year, month, 1).getDay() + 6) % 7; // 월요일 시작
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const today = todayStr(0);
+
+  const { countByDate, goalTotals } = useMemo(() => {
+    const myGoals = goals.filter((g) => g.owner === who);
+    const ids = new Set(myGoals.map((g) => g.id));
+    const countByDate = new Map();
+    const perGoal = new Map();
+    for (const c of checkins) {
+      if (!ids.has(c.goalId) || !c.date.startsWith(monthPrefix)) continue;
+      countByDate.set(c.date, (countByDate.get(c.date) || 0) + 1);
+      perGoal.set(c.goalId, (perGoal.get(c.goalId) || 0) + 1);
+    }
+    const progressByGoal = new Map();
+    for (const p of progress) {
+      const g = myGoals.find((x) => x.id === p.goalId);
+      if (!g || !p.date.startsWith(monthPrefix)) continue;
+      progressByGoal.set(p.goalId, (progressByGoal.get(p.goalId) || 0) + p.amount);
+    }
+    const goalTotals = myGoals
+      .map((g) =>
+        g.type === "milestone"
+          ? { goal: g, label: `+${Math.max(0, progressByGoal.get(g.id) || 0)} ${g.unit}` }
+          : { goal: g, label: `도장 ${perGoal.get(g.id) || 0}개` }
+      )
+      .filter((t) => !t.label.startsWith("도장 0") && !t.label.startsWith("+0 "));
+    return { countByDate, goalTotals };
+  }, [goals, checkins, progress, who, monthPrefix]);
+
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = fmtDate(new Date(year, month, d));
+    cells.push({ d, date, count: countByDate.get(date) || 0, future: date > today });
+  }
+
+  const heat = (n) => (n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : 4);
+  const monthTotal = [...countByDate.values()].reduce((s, n) => s + n, 0);
+
+  return (
+    <div className="history">
+      <div className="history-controls">
+        <div className="history-who">
+          <button type="button" className={who === me ? "selected" : ""} onClick={() => setWho(me)}>
+            나
+          </button>
+          {otherName && (
+            <button
+              type="button"
+              className={who === otherName ? "selected" : ""}
+              onClick={() => setWho(otherName)}
+            >
+              {otherName}
+            </button>
+          )}
+        </div>
+        <div className="history-month">
+          <button
+            type="button"
+            onClick={() => setMonthOffset(monthOffset - 1)}
+            disabled={monthOffset <= MIN_OFFSET}
+            aria-label="이전 달"
+          >
+            ‹
+          </button>
+          <span>
+            {year}년 {month + 1}월
+          </span>
+          <button
+            type="button"
+            onClick={() => setMonthOffset(monthOffset + 1)}
+            disabled={monthOffset >= 0}
+            aria-label="다음 달"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+
+      <div className="history-grid">
+        {DOW.slice(1).concat(DOW[0]).map((d) => (
+          <span key={d} className="history-dow">
+            {d}
+          </span>
+        ))}
+        {cells.map((c, i) =>
+          c === null ? (
+            <span key={`e${i}`} />
+          ) : (
+            <span
+              key={c.date}
+              className={[
+                "history-cell",
+                `h${heat(c.count)}`,
+                c.date === today ? "today" : "",
+                c.future ? "future" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              title={`${c.date} · 도장 ${c.count}개`}
+            >
+              {c.d}
+            </span>
+          )
+        )}
+      </div>
+
+      <div className="history-total">
+        이번 달 도장 {monthTotal}개
+        {monthOffset <= MIN_OFFSET && " · 기록은 최근 1년까지만 보관돼요"}
+      </div>
+
+      {goalTotals.length > 0 && (
+        <ul className="history-goals">
+          {goalTotals.map(({ goal, label }) => (
+            <li key={goal.id}>
+              <span className="icon">{goal.icon}</span>
+              <span className="history-goal-title">{goal.title}</span>
+              <span className="history-goal-count">{label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

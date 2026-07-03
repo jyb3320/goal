@@ -1060,3 +1060,246 @@ input:focus-visible {
   opacity: 1;
   color: var(--stamp-red);
 }
+
+/* ---------- Toast ---------- */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fdf6e8;
+  font-size: 13px;
+  padding: 10px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(36, 31, 24, 0.25);
+  z-index: 100;
+  max-width: calc(100vw - 40px);
+  animation: toast-in 0.25s ease;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ---------- 비밀코드 배너 / 알림 버튼 ---------- */
+
+.code-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(46, 107, 94, 0.1);
+  border: 1px solid rgba(46, 107, 94, 0.4);
+  border-radius: var(--radius);
+  color: var(--teal);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 14px;
+  margin-bottom: 20px;
+}
+
+.code-banner strong {
+  font-family: var(--font-mono);
+  letter-spacing: 0.1em;
+}
+
+.code-banner button {
+  background: none;
+  border: none;
+  color: var(--teal);
+  font-size: 13px;
+  padding: 2px 4px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.code-banner button:hover {
+  opacity: 1;
+}
+
+.notify-btn {
+  margin-left: 10px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.notify-btn:hover {
+  border-color: var(--gold);
+}
+
+/* ---------- History (월간 기록) ---------- */
+
+.history {
+  background: var(--paper-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px 16px;
+}
+
+.history-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.history-who {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.history-who button {
+  background: #fff;
+  border: none;
+  border-right: 1px solid var(--line);
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.history-who button:last-child {
+  border-right: none;
+}
+
+.history-who button.selected {
+  background: var(--stamp-red);
+  color: #fdf6e8;
+  font-weight: 600;
+}
+
+.history-month {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.history-month button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--ink-soft);
+}
+
+.history-month button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.history-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.history-dow {
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-soft);
+  padding-bottom: 2px;
+}
+
+.history-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-soft);
+  background: var(--paper-deep);
+}
+
+.history-cell.h1 {
+  background: rgba(181, 50, 40, 0.22);
+  color: var(--ink);
+}
+
+.history-cell.h2 {
+  background: rgba(181, 50, 40, 0.42);
+  color: #fdf6e8;
+}
+
+.history-cell.h3 {
+  background: rgba(181, 50, 40, 0.62);
+  color: #fdf6e8;
+}
+
+.history-cell.h4 {
+  background: rgba(181, 50, 40, 0.85);
+  color: #fdf6e8;
+}
+
+.history-cell.today {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.history-cell.future {
+  opacity: 0.35;
+}
+
+.history-total {
+  margin-top: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.history-goals {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px dotted var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.history-goals li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+}
+
+.history-goal-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-goal-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--stamp-red);
+  white-space: nowrap;
+}
