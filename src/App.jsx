@@ -260,9 +260,15 @@ export default function App() {
   const reminder = useMemo(() => {
     if (new Date(clock).getHours() < 21) return null;
     const today = todayStr(0);
-    const missed = myGoals.filter(
-      (g) => g.type !== "milestone" && !checkinSet.has(`${g.id}_${today}`)
-    );
+    const thisWeek = weekDates(0);
+    const missed = myGoals.filter((g) => {
+      if (g.type === "milestone" || checkinSet.has(`${g.id}_${today}`)) return false;
+      if (g.type === "weekly") {
+        const weekChecks = thisWeek.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
+        return weekChecks < g.targetPerWeek;
+      }
+      return true;
+    });
     if (missed.length === 0) return null;
     return `밤 9시가 넘었어요 — 아직 안 찍은 도장이 ${missed.length}개 있어요!`;
   }, [myGoals, checkinSet, clock]);
@@ -276,6 +282,12 @@ export default function App() {
   const todayStampGoals = myGoals.filter((g) => g.type !== "milestone");
   const todayDone = todayStampGoals.filter((g) => checkinSet.has(`${g.id}_${todayStr(0)}`)).length;
   const perfectToday = todayStampGoals.length > 0 && todayDone === todayStampGoals.length;
+  const myWeekRate = weeklySummary.mine.rate !== null ? Math.round(weeklySummary.mine.rate * 100) : null;
+  const otherWeekRate =
+    weeklySummary.theirs && weeklySummary.theirs.rate !== null
+      ? Math.round(weeklySummary.theirs.rate * 100)
+      : null;
+  const activeMilestones = myGoals.filter((g) => g.type === "milestone").length;
 
   // 레벨업 축하 — 첫 로딩 때의 레벨은 기준선으로만 쓰고 축하하지 않음
   const levelRef = useRef(null);
@@ -363,26 +375,57 @@ export default function App() {
   if (!me) {
     return (
       <div className="gate">
-        <form className="gate-card" onSubmit={submitName}>
-          <div className="stamp-mark">印</div>
-          <h2>도장판</h2>
-          <p>
-            둘이서 매일 습관 찍고, 서로 도장 확인하는 곳.
-            <br />
-            먼저 네 이름 알려줘.
-          </p>
-          <input
-            value={nameInput}
-            onChange={(e) => setNameInput(e.target.value)}
-            placeholder="이름 (예: 햄)"
-            autoFocus
-          />
-          {gateError && <div className="gate-error">{gateError}</div>}
-          <button type="submit" className="btn-primary">
-            시작하기
-          </button>
-          <div className="gate-hint">같은 링크를 친구한테 보내고, 친구는 친구 이름으로 시작하면 됨</div>
-        </form>
+        <div className="gate-shell">
+          <section className="gate-panel" aria-label="도장판 소개">
+            <div className="gate-brand">
+              <span className="stamp-mark">印</span>
+              <div>
+                <p className="gate-kicker">둘이 쓰는 습관 도장판</p>
+                <h1>도장판</h1>
+              </div>
+            </div>
+            <div className="gate-preview">
+              <div className="preview-head">
+                <span>오늘 기록</span>
+                <strong>4 / 5</strong>
+              </div>
+              <div className="preview-stamps" aria-hidden="true">
+                {["월", "화", "수", "목", "금", "토", "일"].map((d, i) => (
+                  <span key={d} className={i < 4 ? "filled" : i === 4 ? "today" : ""}>
+                    {d}
+                  </span>
+                ))}
+              </div>
+              <div className="preview-row">
+                <span>친구 응원</span>
+                <b>👏 🔥 +2</b>
+              </div>
+              <div className="preview-row">
+                <span>마을 성장</span>
+                <b>Lv.3 · 새싹 18</b>
+              </div>
+            </div>
+          </section>
+          <form className="gate-card" onSubmit={submitName}>
+            <h2>입장하기</h2>
+            <p>
+              이름만 정하면 바로 시작해요.
+              <br />
+              같은 링크를 친구에게 보내면 둘이 같은 도장판을 씁니다.
+            </p>
+            <input
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="이름 (예: 햄)"
+              autoFocus
+            />
+            {gateError && <div className="gate-error">{gateError}</div>}
+            <button type="submit" className="btn-primary">
+              시작하기
+            </button>
+            <div className="gate-hint">먼저 들어온 두 이름만 이 도장판에 남아요.</div>
+          </form>
+        </div>
       </div>
     );
   }
@@ -468,6 +511,40 @@ export default function App() {
 
       {view === "board" && (
         <>
+          <section className="board-hero">
+            <div>
+              <p className="eyebrow">오늘의 도장판</p>
+              <h2>
+                {perfectToday
+                  ? "오늘 몫은 다 찍었어요"
+                  : todayStampGoals.length > 0
+                    ? `오늘 ${todayStampGoals.length - todayDone}개 남았어요`
+                    : "첫 목표를 만들어볼까요"}
+              </h2>
+              <p className="board-hero-sub">
+                도장을 찍으면 XP가 쌓이고, 친구는 리액션과 메시지로 응원할 수 있어요.
+              </p>
+            </div>
+            <div className="stat-grid" aria-label="요약">
+              <div className="stat-tile strong">
+                <span>오늘</span>
+                <strong>{todayDone}/{todayStampGoals.length}</strong>
+              </div>
+              <div className="stat-tile">
+                <span>이번 주</span>
+                <strong>{myWeekRate !== null ? `${myWeekRate}%` : "시작 전"}</strong>
+              </div>
+              <div className="stat-tile">
+                <span>{otherName ? `${otherName}` : "친구"}</span>
+                <strong>{otherWeekRate !== null ? `${otherWeekRate}%` : "대기"}</strong>
+              </div>
+              <div className="stat-tile">
+                <span>기간 목표</span>
+                <strong>{activeMilestones}개</strong>
+              </div>
+            </div>
+          </section>
+
           <button type="button" className="hud-board" onClick={() => setView("village")} title="마을 보러가기">
             <span className="hud-lv">Lv.{myLevel}</span>
             <div className="hud-board-xp">
@@ -494,7 +571,7 @@ export default function App() {
           {otherName && <WeekSummary summary={weeklySummary} />}
 
           <div className="columns">
-            <div>
+            <section className="goal-column">
               <div className="column-head">
                 <h3>내 목표</h3>
                 <span className="tag">
@@ -518,9 +595,9 @@ export default function App() {
                   </button>
                 )}
               </div>
-            </div>
+            </section>
 
-            <div>
+            <section className="goal-column friend-column">
               <div className="column-head">
                 <h3>{otherName || "친구"} 목표</h3>
                 <span className="tag">{otherName ? `${otherName} · Lv.${otherLevel}` : "대기 중"}</span>
@@ -535,7 +612,7 @@ export default function App() {
                 )}
                 {otherGoals.map((g) => renderGoalCard(g, false))}
               </div>
-            </div>
+            </section>
           </div>
 
           <MessageBoard
