@@ -373,6 +373,12 @@ export default function App() {
     mutate({ action: "addExcuse", goalId, text });
   };
 
+  // ✕ 칸을 누르면 그날 못 찍은 이유를 토스트로
+  const peekExcuse = (date, text) => {
+    const [, m, d] = date.split("-");
+    showToast(`${parseInt(m, 10)}/${parseInt(d, 10)} 못 찍은 이유 — ${text}`);
+  };
+
   // 상대가 오늘 나를 콕 찔렀으면 배너로 (푸시를 못 받는 환경 대비)
   const incomingPoke = useMemo(() => {
     if (!otherName) return null;
@@ -480,10 +486,12 @@ export default function App() {
         isMine={isMine}
         checkinSet={checkinSet}
         reactions={state.reactions}
+        excuses={state.excuses}
         me={me}
         onToggleCheckin={toggleCheckin}
         onToggleReaction={toggleReaction}
         onDelete={deleteGoal}
+        onPeekExcuse={peekExcuse}
       />
     );
 

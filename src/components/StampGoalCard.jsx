@@ -8,10 +8,12 @@ export default function StampGoalCard({
   isMine,
   checkinSet,
   reactions,
+  excuses,
   me,
   onToggleCheckin,
   onToggleReaction,
   onDelete,
+  onPeekExcuse,
 }) {
   const [stampingKey, setStampingKey] = useState(null);
   const timerRef = useRef(null);
@@ -19,6 +21,10 @@ export default function StampGoalCard({
 
   const days = last14();
   const isWeekly = goal.type === "weekly";
+  // 못 찍은 날 남긴 이유 — 칸에 ✕로 표시하고, 누르면 이유가 보인다
+  const excuseByDate = new Map(
+    (excuses || []).filter((x) => x.goalId === goal.id).map((x) => [x.date, x.text])
+  );
   const thisWeek = weekDates(0);
   const weekDone = thisWeek.filter((d) => checkinSet.has(`${goal.id}_${d}`)).length;
   const badge = isWeekly
@@ -80,6 +86,7 @@ export default function StampGoalCard({
           const isToday = d === todayStr(0);
           const isYesterday = d === todayStr(-1);
           const filled = checkinSet.has(key);
+          const excuse = !filled ? excuseByDate.get(d) : null;
           // 어제 깜빡한 도장은 소급해서 찍을 수 있게
           const clickable = isMine && (isToday || isYesterday);
           return (
@@ -90,22 +97,30 @@ export default function StampGoalCard({
                 className={[
                   "stamp-circle",
                   filled ? "filled" : "",
+                  excuse ? "excused" : "",
                   isToday ? "today" : "",
                   clickable ? "clickable" : "",
                   stampingKey === key ? "stamping" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                disabled={!clickable}
-                onClick={(e) => clickable && stamp(d, e)}
-                aria-label={`${d} ${filled ? "완료" : "미완료"}`}
-                title={isYesterday && isMine ? "어제 것도 소급해서 찍을 수 있어요" : undefined}
+                disabled={!clickable && !excuse}
+                onClick={(e) => (clickable ? stamp(d, e) : excuse && onPeekExcuse(d, excuse))}
+                aria-label={`${d} ${filled ? "완료" : excuse ? "못 찍음 — 이유 있음" : "미완료"}`}
+                title={
+                  excuse && !clickable
+                    ? excuse
+                    : isYesterday && isMine
+                      ? "어제 것도 소급해서 찍을 수 있어요"
+                      : undefined
+                }
               >
                 {filled && (
                   <span className="seal-char" style={{ transform: `rotate(${sealRot(key)}deg)` }}>
                     {dowOf(d)}
                   </span>
                 )}
+                {!filled && excuse && <span className="excuse-mark">✕</span>}
               </button>
             </div>
           );

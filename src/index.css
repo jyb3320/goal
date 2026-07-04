@@ -640,6 +640,21 @@ input:focus-visible {
   user-select: none;
 }
 
+/* 못 찍고 이유를 남긴 칸 — 누르면 이유가 보인다 */
+.stamp-circle.excused {
+  border-style: solid;
+  border-color: rgba(107, 97, 81, 0.45);
+  background: rgba(36, 31, 24, 0.045);
+  cursor: pointer;
+}
+
+.excuse-mark {
+  font-size: 11px;
+  color: var(--ink-soft);
+  line-height: 1;
+  user-select: none;
+}
+
 .stamp-circle.clickable {
   cursor: pointer;
   transition: transform 0.1s ease;
