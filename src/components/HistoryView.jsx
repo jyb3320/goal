@@ -3,8 +3,8 @@ import { fmtDate, todayStr, DOW } from "../lib/dates.js";
 
 const MIN_OFFSET = -12; // 서버가 도장 기록을 약 1년만 원본으로 보관
 
-// 월간 달력 히트맵 + 목표별 합계
-export default function HistoryView({ goals, checkins, progress, me, otherName }) {
+// 월간 달력 히트맵 + 목표별 합계 + 반성 노트
+export default function HistoryView({ goals, checkins, progress, excuses, me, otherName }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [who, setWho] = useState(me);
 
@@ -53,6 +53,15 @@ export default function HistoryView({ goals, checkins, progress, me, otherName }
 
   const heat = (n) => (n === 0 ? 0 : n === 1 ? 1 : n === 2 ? 2 : n === 3 ? 3 : 4);
   const monthTotal = [...countByDate.values()].reduce((s, n) => s + n, 0);
+
+  // 이 달의 반성 노트 — 못 찍은 날 남긴 이유들 (최신순)
+  const monthExcuses = useMemo(() => {
+    const goalById = new Map(goals.map((g) => [g.id, g]));
+    return (excuses || [])
+      .filter((x) => x.owner === who && x.date.startsWith(monthPrefix))
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .map((x) => ({ ...x, goal: goalById.get(x.goalId) || null }));
+  }, [excuses, goals, who, monthPrefix]);
 
   return (
     <div className="history">
@@ -137,6 +146,26 @@ export default function HistoryView({ goals, checkins, progress, me, otherName }
             </li>
           ))}
         </ul>
+      )}
+
+      {monthExcuses.length > 0 && (
+        <div className="reflect">
+          <div className="reflect-head">
+            <span className="reflect-title">반성 노트</span>
+            <span className="reflect-count">못 찍은 날 {monthExcuses.length}번</span>
+          </div>
+          <ul className="reflect-list">
+            {monthExcuses.map((x) => (
+              <li key={x.id}>
+                <span className="reflect-date">{parseInt(x.date.slice(8), 10)}일</span>
+                <span className="reflect-goal">
+                  {x.goal ? `${x.goal.icon} ${x.goal.title}` : "(지운 목표)"}
+                </span>
+                <span className="reflect-text">{x.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

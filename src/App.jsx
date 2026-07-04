@@ -10,10 +10,11 @@ import AddGoalForm from "./components/AddGoalForm.jsx";
 import MessageBoard from "./components/MessageBoard.jsx";
 import WeekSummary from "./components/WeekSummary.jsx";
 import HistoryView from "./components/HistoryView.jsx";
+import MissedPanel from "./components/MissedPanel.jsx";
 import Toast from "./components/Toast.jsx";
 
 const API = "/api/state";
-const EMPTY_STATE = { users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [], archive: {} };
+const EMPTY_STATE = { users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [], pokes: [], excuses: [], archive: {} };
 
 function pickState(data) {
   return {
@@ -23,6 +24,8 @@ function pickState(data) {
     progress: data.progress || [],
     reactions: data.reactions || [],
     messages: data.messages || [],
+    pokes: data.pokes || [],
+    excuses: data.excuses || [],
     archive: data.archive || {},
   };
 }
@@ -36,6 +39,7 @@ export default function App() {
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
   const [dismissedReminder, setDismissedReminder] = useState(false);
+  const [dismissedPokeId, setDismissedPokeId] = useState(null);
   const [pushKey, setPushKey] = useState(null);
   const [pushOn, setPushOn] = useState(false);
   const [toast, setToast] = useState(null);
@@ -282,12 +286,6 @@ export default function App() {
   const todayStampGoals = myGoals.filter((g) => g.type !== "milestone");
   const todayDone = todayStampGoals.filter((g) => checkinSet.has(`${g.id}_${todayStr(0)}`)).length;
   const perfectToday = todayStampGoals.length > 0 && todayDone === todayStampGoals.length;
-  const myWeekRate = weeklySummary.mine.rate !== null ? Math.round(weeklySummary.mine.rate * 100) : null;
-  const otherWeekRate =
-    weeklySummary.theirs && weeklySummary.theirs.rate !== null
-      ? Math.round(weeklySummary.theirs.rate * 100)
-      : null;
-  const activeMilestones = myGoals.filter((g) => g.type === "milestone").length;
 
   // 레벨업 축하 — 첫 로딩 때의 레벨은 기준선으로만 쓰고 축하하지 않음
   const levelRef = useRef(null);
@@ -364,6 +362,36 @@ export default function App() {
   const sendMessage = (text) => {
     mutate({ action: "addMessage", text });
   };
+
+  const poke = async () => {
+    vibrate(10);
+    const ok = await mutate({ action: "poke" });
+    if (ok) showToast(`👉 ${otherName}을(를) 콕 찔렀어요!`);
+  };
+
+  const saveExcuse = (goalId, text) => {
+    mutate({ action: "addExcuse", goalId, text });
+  };
+
+  // 상대가 오늘 나를 콕 찔렀으면 배너로 (푸시를 못 받는 환경 대비)
+  const incomingPoke = useMemo(() => {
+    if (!otherName) return null;
+    const today = todayStr(0);
+    const fromFriend = state.pokes.filter((p) => p.from === otherName && p.date === today);
+    return fromFriend.length > 0 ? fromFriend[fromFriend.length - 1] : null;
+  }, [state.pokes, otherName]);
+
+  // 어제 못 찍은 매일 목표 — 이유를 남기거나 소급 도장을 찍어야 사라짐
+  const missedYesterday = useMemo(() => {
+    const yesterday = todayStr(-1);
+    return myGoals.filter(
+      (g) =>
+        g.type === "daily" &&
+        (!g.createdAt || g.createdAt <= yesterday) &&
+        !checkinSet.has(`${g.id}_${yesterday}`) &&
+        !state.excuses.some((x) => x.goalId === g.id && x.date === yesterday)
+    );
+  }, [myGoals, checkinSet, state.excuses]);
 
   const deleteMessage = (id) => {
     mutate(
@@ -504,6 +532,7 @@ export default function App() {
           goals={state.goals}
           checkins={state.checkins}
           progress={state.progress}
+          excuses={state.excuses}
           me={me}
           otherName={otherName}
         />
@@ -511,53 +540,51 @@ export default function App() {
 
       {view === "board" && (
         <>
-          <section className="board-hero">
-            <div>
-              <p className="eyebrow">오늘의 도장판</p>
-              <h2>
-                {perfectToday
-                  ? "오늘 몫은 다 찍었어요"
-                  : todayStampGoals.length > 0
-                    ? `오늘 ${todayStampGoals.length - todayDone}개 남았어요`
-                    : "첫 목표를 만들어볼까요"}
-              </h2>
-              <p className="board-hero-sub">
-                도장을 찍으면 XP가 쌓이고, 친구는 리액션과 메시지로 응원할 수 있어요.
-              </p>
-            </div>
-            <div className="stat-grid" aria-label="요약">
-              <div className="stat-tile strong">
-                <span>오늘</span>
-                <strong>{todayDone}/{todayStampGoals.length}</strong>
+          <section className="board-head">
+            <div className="board-head-top">
+              <div>
+                <p className="eyebrow">오늘의 도장판</p>
+                <h2>
+                  {perfectToday
+                    ? "오늘 몫은 다 찍었어요"
+                    : todayStampGoals.length > 0
+                      ? `오늘 ${todayStampGoals.length - todayDone}개 남았어요`
+                      : "첫 목표를 만들어볼까요"}
+                </h2>
               </div>
-              <div className="stat-tile">
-                <span>이번 주</span>
-                <strong>{myWeekRate !== null ? `${myWeekRate}%` : "시작 전"}</strong>
-              </div>
-              <div className="stat-tile">
-                <span>{otherName ? `${otherName}` : "친구"}</span>
-                <strong>{otherWeekRate !== null ? `${otherWeekRate}%` : "대기"}</strong>
-              </div>
-              <div className="stat-tile">
-                <span>기간 목표</span>
-                <strong>{activeMilestones}개</strong>
+              <div className={`today-seal ${perfectToday ? "done" : ""}`} aria-label="오늘 진행">
+                <strong>
+                  {todayDone}
+                  <span>/{todayStampGoals.length}</span>
+                </strong>
+                <span className="today-seal-label">{perfectToday ? "완" : "오늘"}</span>
               </div>
             </div>
+            <button type="button" className="xp-line" onClick={() => setView("village")} title="마을 보러가기">
+              <span className="hud-lv">Lv.{myLevel}</span>
+              <div className="hud-board-xp">
+                <div className="hud-board-fill" style={{ width: `${xpPct}%` }} />
+              </div>
+              <span className="xp-line-meta">다음 레벨까지 {xpNeed - (myXP - xpBase)} XP · 마을 →</span>
+            </button>
           </section>
 
-          <button type="button" className="hud-board" onClick={() => setView("village")} title="마을 보러가기">
-            <span className="hud-lv">Lv.{myLevel}</span>
-            <div className="hud-board-xp">
-              <div className="hud-board-fill" style={{ width: `${xpPct}%` }} />
+          {incomingPoke && incomingPoke.id !== dismissedPokeId && (
+            <div className="reminder-banner poke-banner">
+              <span>👉 {otherName}이(가) 콕 찔렀어요! 오늘 도장 찍으라는 뜻인 듯.</span>
+              <button type="button" onClick={() => setDismissedPokeId(incomingPoke.id)} aria-label="닫기">
+                ✕
+              </button>
             </div>
-            <div className="hud-board-meta">
-              <span className={`hud-board-today ${perfectToday ? "done" : ""}`}>
-                오늘 {todayDone}/{todayStampGoals.length}
-                {perfectToday && " ✨"}
-              </span>
-              <span>다음 레벨까지 {xpNeed - (myXP - xpBase)} XP · 마을 →</span>
-            </div>
-          </button>
+          )}
+
+          {missedYesterday.length > 0 && (
+            <MissedPanel
+              goals={missedYesterday}
+              onStamp={(goalId) => toggleCheckin(goalId, todayStr(-1))}
+              onSaveReason={saveExcuse}
+            />
+          )}
 
           {reminder && !dismissedReminder && (
             <div className="reminder-banner">
@@ -600,7 +627,14 @@ export default function App() {
             <section className="goal-column friend-column">
               <div className="column-head">
                 <h3>{otherName || "친구"} 목표</h3>
-                <span className="tag">{otherName ? `${otherName} · Lv.${otherLevel}` : "대기 중"}</span>
+                <div className="column-head-right">
+                  {otherName && (
+                    <button type="button" className="poke-btn" onClick={poke} title="찌르면 친구 폰에 알림이 가요">
+                      👉 콕
+                    </button>
+                  )}
+                  <span className="tag">{otherName ? `${otherName} · Lv.${otherLevel}` : "대기 중"}</span>
+                </div>
               </div>
               <div className="goal-list">
                 {loaded && otherGoals.length === 0 && (
@@ -624,7 +658,7 @@ export default function App() {
           />
 
           <div className="footer-note">
-            오늘·어제 칸 체크 가능 · 기간 목표는 수량으로 기록 · 친구 도장엔 리액션과 응원만
+            오늘·어제 칸 체크 가능 · 못 찍은 날엔 이유 남기기 · 친구 도장엔 리액션·응원·콕 찌르기
           </div>
         </>
       )}

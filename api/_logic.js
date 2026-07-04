@@ -9,6 +9,7 @@ export const GOAL_TYPES = ["daily", "weekly", "milestone"];
 const REACTION_KEEP_DAYS = 14; // UI가 최근 7일만 보여줌
 const CHECKIN_KEEP_DAYS = 400; // 기록 뷰(1년)용. 넘으면 아카이브 집계로
 const PROGRESS_KEEP_DAYS = 90; // 넘으면 목표당 한 건으로 합침
+const EXCUSE_KEEP_DAYS = 180; // 반성 노트 보관 기간
 
 // 매번 새 객체를 만든다 — 모듈 레벨 상수를 공유하면 normalize 결과를 통해
 // 기본값의 배열/객체가 참조로 새어나가 뮤테이션에 오염된다 (웜 인스턴스에서 실제 버그)
@@ -20,6 +21,8 @@ export function emptyState() {
     progress: [],
     reactions: [],
     messages: [],
+    pokes: [], // 콕 찌르기 (오늘/어제 것만 보관)
+    excuses: [], // 못 찍은 날의 이유 — 기록 탭 반성 노트용
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
   };
@@ -84,7 +87,7 @@ export function seoulWeekDates(today = seoulToday()) {
 export function normalize(raw) {
   const { _v, ...rest } = raw || {};
   const s = { ...emptyState(), ...rest };
-  for (const key of ["users", "goals", "checkins", "progress", "reactions", "messages"]) {
+  for (const key of ["users", "goals", "checkins", "progress", "reactions", "messages", "pokes", "excuses"]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
   for (const key of ["push", "archive"]) {
@@ -152,6 +155,13 @@ export function compact(state, today = seoulToday()) {
     }
   }
   state.progress = keepP;
+
+  // 콕 찌르기는 하루짜리 신호 — 오늘/어제 것만 남긴다
+  const pokeCutoff = shiftDate(today, -1);
+  state.pokes = state.pokes.filter((p) => p.date >= pokeCutoff).slice(-20);
+
+  const excuseCutoff = shiftDate(today, -EXCUSE_KEEP_DAYS);
+  state.excuses = state.excuses.filter((x) => x.date >= excuseCutoff).slice(-300);
 }
 
 // user는 인증된 사용자 — owner/by/from은 클라이언트 값을 믿지 않고 여기서 강제한다
@@ -192,6 +202,7 @@ export function applyAction(state, body, user) {
       state.checkins = state.checkins.filter((c) => c.goalId !== goal.id);
       state.progress = state.progress.filter((p) => p.goalId !== goal.id);
       state.reactions = state.reactions.filter((r) => r.goalId !== goal.id);
+      state.excuses = state.excuses.filter((x) => x.goalId !== goal.id);
       return {};
     }
 
@@ -263,6 +274,34 @@ export function applyAction(state, body, user) {
       if (!msg) return { noop: true };
       if (msg.from !== user) return { error: "본인 메시지만 지울 수 있어요", status: 403 };
       state.messages = state.messages.filter((m) => m.id !== id);
+      return {};
+    }
+
+    case "poke": {
+      const target = state.users.find((u) => u !== user);
+      if (!target) return { error: "아직 친구가 안 들어왔어요", status: 400 };
+      state.pokes.push({ id: newId("k"), from: user, date: today, at: new Date().toISOString() });
+      state.pokes = state.pokes.slice(-20);
+      return {};
+    }
+
+    case "addExcuse": {
+      // 어제 못 찍은 매일 목표에 이유를 남긴다 (기록 탭 반성 노트에 쌓임)
+      const goal = findGoal(state, str(body.goalId, 40));
+      const text = str(body.text, 100);
+      const yesterday = shiftDate(today, -1);
+      if (!goal || !text) return { error: "invalid excuse", status: 400 };
+      if (goal.owner !== user) return { error: "본인 목표에만 쓸 수 있어요", status: 403 };
+      if (goal.type !== "daily") return { error: "매일 목표에만 이유를 남겨요", status: 400 };
+      if (goal.createdAt && goal.createdAt > yesterday) {
+        return { error: "어제는 없던 목표예요", status: 400 };
+      }
+      if (state.checkins.some((c) => c.goalId === goal.id && c.date === yesterday)) {
+        return { error: "어제 도장을 이미 찍었어요", status: 400 };
+      }
+      const existing = state.excuses.find((x) => x.goalId === goal.id && x.date === yesterday);
+      if (existing) existing.text = text;
+      else state.excuses.push({ id: newId("x"), goalId: goal.id, owner: user, date: yesterday, text });
       return {};
     }
 

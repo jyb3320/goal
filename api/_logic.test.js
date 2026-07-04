@@ -141,6 +141,97 @@ describe("컴팩션", () => {
   });
 });
 
+describe("콕 찌르기", () => {
+  it("친구가 있어야 찌를 수 있고, from은 서버가 강제", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    expect(b.post({ action: "poke", name: "햄" }).status).toBe(400); // 혼자면 불가
+    b.post({ action: "join", name: "쥐" });
+    const r = b.post({ action: "poke", name: "햄", from: "쥐" });
+    expect(r.status).toBe(200);
+    expect(r.respond.pokes).toHaveLength(1);
+    expect(r.respond.pokes[0].from).toBe("햄");
+  });
+
+  it("무제한으로 찌를 수 있지만 최근 20개만 보관", () => {
+    const { b } = twoUsers();
+    for (let i = 0; i < 25; i++) b.post({ action: "poke", name: "쥐" });
+    const r = b.post({ action: "poke", name: "쥐" });
+    expect(r.respond.pokes.length).toBeLessThanOrEqual(20);
+  });
+
+  it("컴팩션이 그저께 이전 찌르기를 지움", () => {
+    const today = seoulToday();
+    const state = normalize({
+      pokes: [
+        { id: "k1", from: "쥐", date: shiftDate(today, -3) },
+        { id: "k2", from: "쥐", date: today },
+      ],
+    });
+    compact(state, today);
+    expect(state.pokes).toHaveLength(1);
+    expect(state.pokes[0].id).toBe("k2");
+  });
+});
+
+describe("반성 노트 (못 찍은 이유)", () => {
+  const yesterday = () => shiftDate(seoulToday(), -1);
+
+  // addGoal은 createdAt을 오늘로 박아서, 과거에 만든 목표는 상태를 직접 주입해 만든다
+  function boardWithOldGoal() {
+    let raw = normalize({
+      users: ["햄", "쥐"],
+      goals: [{ id: "g1", owner: "햄", title: "달리기", type: "daily", createdAt: shiftDate(seoulToday(), -10) }],
+    });
+    return {
+      post(body) {
+        const o = handlePost(raw, body);
+        if (o.write) raw = o.state;
+        return o;
+      },
+    };
+  }
+
+  it("어제 못 찍은 매일 목표에 이유를 남김 (owner는 서버가 강제)", () => {
+    const b = boardWithOldGoal();
+    const r = b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "야근했음", owner: "쥐" });
+    expect(r.status).toBe(200);
+    expect(r.respond.excuses).toHaveLength(1);
+    expect(r.respond.excuses[0].owner).toBe("햄");
+    expect(r.respond.excuses[0].date).toBe(yesterday());
+  });
+
+  it("어제 도장을 찍었으면 이유를 남길 수 없음", () => {
+    const b = boardWithOldGoal();
+    b.post({ action: "toggleCheckin", name: "햄", goalId: "g1", date: yesterday() });
+    const r = b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "야근" });
+    expect(r.status).toBe(400);
+  });
+
+  it("남의 목표에는 불가, 오늘 만든 목표에도 불가", () => {
+    const b = boardWithOldGoal();
+    expect(b.post({ action: "addExcuse", name: "쥐", goalId: "g1", text: "x" }).status).toBe(403);
+    const created = b.post({ action: "addGoal", name: "쥐", goal: { title: "새 목표" } });
+    const newGoal = created.respond.goals.find((g) => g.owner === "쥐");
+    expect(b.post({ action: "addExcuse", name: "쥐", goalId: newGoal.id, text: "x" }).status).toBe(400);
+  });
+
+  it("같은 목표·같은 날에 다시 쓰면 덮어씀", () => {
+    const b = boardWithOldGoal();
+    b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "야근" });
+    const r = b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "사실 귀찮았음" });
+    expect(r.respond.excuses).toHaveLength(1);
+    expect(r.respond.excuses[0].text).toBe("사실 귀찮았음");
+  });
+
+  it("목표를 지우면 그 목표의 반성 노트도 사라짐", () => {
+    const b = boardWithOldGoal();
+    b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "야근" });
+    const r = b.post({ action: "deleteGoal", name: "햄", goalId: "g1" });
+    expect(r.respond.excuses).toHaveLength(0);
+  });
+});
+
 describe("리마인더 카운트", () => {
   it("매일 목표 미체크는 카운트, 주간 목표는 달성/오늘 체크 시 제외", () => {
     const today = seoulToday();

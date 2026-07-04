@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
-import { KEY, CAS_SCRIPT, normalize, sanitize, versionOf, handlePost } from "./_logic.js";
+import webpush from "web-push";
+import { KEY, CAS_SCRIPT, normalize, sanitize, versionOf, handlePost, str } from "./_logic.js";
 import { getVapidKeys } from "./_vapid.js";
 
 // Vercel Marketplace의 Upstash Redis 연동은 UPSTASH_REDIS_REST_* 또는
@@ -9,6 +10,27 @@ const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_A
 const kv = redisUrl && redisToken
   ? new Redis({ url: redisUrl, token: redisToken })
   : null;
+
+// 콕 찌르기: 상대에게 즉시 푸시. 실패해도 액션 자체는 성공으로 둔다 (구독 안 했을 수 있음).
+async function sendPokePush(state, fromName) {
+  const target = state.users.find((u) => u !== fromName);
+  const sub = target && state.push[target];
+  if (!sub) return;
+  const vapid = await getVapidKeys(kv);
+  webpush.setVapidDetails(
+    process.env.VAPID_SUBJECT || "mailto:admin@example.com",
+    vapid.publicKey,
+    vapid.privateKey
+  );
+  await webpush.sendNotification(
+    sub,
+    JSON.stringify({
+      title: "도장판 👉",
+      body: `${fromName}이(가) 콕 찔렀어요 — 오늘 도장 잊지 마!`,
+      tag: `poke-${Date.now()}`, // 매번 새 태그 = 찌를 때마다 알림
+    })
+  );
+}
 
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
@@ -56,7 +78,14 @@ export default async function handler(req, res) {
       }
       const payload = JSON.stringify({ ...out.state, _v: version + 1 });
       const ok = await kv.eval(CAS_SCRIPT, [KEY], [String(version), payload]);
-      if (ok === 1) return res.status(out.status).json(out.respond);
+      if (ok === 1) {
+        if (str(body.action, 30) === "poke") {
+          await sendPokePush(out.state, str(body.name, 20)).catch((e) =>
+            console.error("poke push failed", e.statusCode || e.message)
+          );
+        }
+        return res.status(out.status).json(out.respond);
+      }
       // 실패하면(다른 요청이 먼저 씀) 최신 값을 다시 읽어 재시도
     }
     return res.status(409).json({ error: "conflict" });

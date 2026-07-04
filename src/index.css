@@ -17,7 +17,8 @@
   --radius: 6px;
   --font-display: "Gowun Batang", serif;
   --font-body: "Noto Sans KR", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  /* 예전엔 JetBrains Mono — 코딩 폰트가 한지 톤을 깨서 본문 폰트로 통일 */
+  --font-mono: "Noto Sans KR", sans-serif;
 }
 
 * {
@@ -578,12 +579,13 @@ input:focus-visible {
   flex: 1;
 }
 
-/* 좁은 화면에선 14일 중 최근 7일만 (넘침 방지) */
+/* 좁은 화면에선 14일 중 최근 7일만 — 14칸이 실제로 필요로 하는 폭(~640px)에 맞춤.
+   480px 기준이던 시절엔 그 사이 폭에서 가로로 넘쳤다. */
 .range-short {
   display: none;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .stamp-cell:nth-child(-n + 7) {
     display: none;
   }
@@ -605,8 +607,9 @@ input:focus-visible {
 }
 
 .stamp-circle {
-  width: 30px;
-  height: 30px;
+  width: 100%;
+  max-width: 34px;
+  aspect-ratio: 1;
   border-radius: 50%;
   border: 1.5px dashed var(--line);
   display: flex;
@@ -617,14 +620,28 @@ input:focus-visible {
   padding: 0;
 }
 
+/* 찍힌 칸 = 인주 도장. 요일 글자가 눌린 인장 + 살짝 일그러진 원 */
 .stamp-circle.filled {
-  border-style: solid;
-  border-color: var(--stamp-red);
-  background: rgba(181, 50, 40, 0.12);
-  box-shadow: 0 0 0 4px rgba(181, 50, 40, 0.07);
+  border: 1.5px solid var(--stamp-red-deep);
+  border-radius: 49% 51% 48% 52% / 51% 49% 52% 48%;
+  background: radial-gradient(circle at 35% 30%, #c9503f, var(--stamp-red) 55%, var(--stamp-red-deep));
+  box-shadow:
+    0 0 0 3px rgba(181, 50, 40, 0.08),
+    inset 0 1px 3px rgba(0, 0, 0, 0.22);
+}
+
+.seal-char {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: #fdf3e4;
+  line-height: 1;
+  text-shadow: 0 0 3px rgba(138, 36, 29, 0.7);
+  user-select: none;
 }
 
 .stamp-circle.clickable {
+  cursor: pointer;
   transition: transform 0.1s ease;
 }
 
@@ -632,42 +649,51 @@ input:focus-visible {
   transform: scale(0.86);
 }
 
-.stamp-circle.filled::after {
-  content: "";
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--stamp-red);
-  transform: rotate(-6deg);
-}
-
 .stamp-circle.today {
-  border-color: var(--teal);
+  max-width: 40px;
   border-width: 2px;
+  border-color: var(--teal);
 }
 
-.stamp-circle.clickable {
-  cursor: pointer;
+.stamp-circle.today .seal-char {
+  font-size: 17px;
 }
 
 .stamp-circle.clickable:hover {
   border-color: var(--stamp-red-deep);
 }
 
-.stamp-circle.stamping::after {
+/* 찍는 순간: 위에서 쿵 내려찍히는 인장 */
+.stamp-circle.stamping {
+  animation: stamp-press 0.38s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.stamp-circle.stamping .seal-char {
   animation: stamp-down 0.38s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes stamp-press {
+  0% {
+    box-shadow: 0 0 0 3px rgba(181, 50, 40, 0.08);
+  }
+  55% {
+    box-shadow: 0 0 0 9px rgba(181, 50, 40, 0.18);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(181, 50, 40, 0.08);
+  }
 }
 
 @keyframes stamp-down {
   0% {
-    transform: scale(2.4) rotate(18deg);
+    transform: scale(2.2) rotate(16deg);
     opacity: 0;
   }
   60% {
     opacity: 1;
   }
   100% {
-    transform: scale(1) rotate(-6deg);
+    transform: scale(1);
     opacity: 1;
   }
 }
@@ -791,112 +817,122 @@ input:focus-visible {
   font-family: var(--font-mono);
 }
 
-/* ---------- Board hero ---------- */
+/* ---------- Board head (헤드라인 + 오늘 인장 + XP 한 줄) ---------- */
 
-.board-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.92fr);
-  gap: 18px;
-  align-items: stretch;
+.board-head {
   background:
-    linear-gradient(135deg, rgba(181, 50, 40, 0.11), transparent 42%),
+    linear-gradient(135deg, rgba(181, 50, 40, 0.1), transparent 45%),
     linear-gradient(90deg, var(--paper-soft), rgba(248, 242, 226, 0.86));
   border: 1px solid rgba(185, 163, 110, 0.75);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 18px 18px 14px;
   margin-bottom: 16px;
   box-shadow: var(--shadow);
 }
 
+.board-head-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
 .eyebrow {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   color: var(--teal);
-  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.board-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 4vw, 34px);
+  line-height: 1.15;
+  letter-spacing: 0;
+  word-break: keep-all;
+}
+
+/* 오늘 진행을 보여주는 큰 인장 */
+.today-seal {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  border: 3px solid var(--stamp-red);
+  border-radius: 49% 51% 48% 52% / 51% 49% 52% 48%;
+  transform: rotate(6deg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  color: var(--stamp-red);
+  background: rgba(255, 250, 240, 0.75);
+}
+
+.today-seal strong {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.today-seal strong span {
+  font-size: 15px;
+  opacity: 0.75;
+}
+
+.today-seal-label {
+  font-family: var(--font-display);
   font-size: 11px;
   font-weight: 700;
 }
 
-.board-hero h2 {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: clamp(26px, 4vw, 40px);
-  line-height: 1.12;
-  letter-spacing: 0;
+.today-seal.done {
+  background: radial-gradient(circle at 35% 30%, #c9503f, var(--stamp-red) 55%, var(--stamp-red-deep));
+  border-color: var(--stamp-red-deep);
+  color: #fdf3e4;
+  box-shadow: 0 0 0 4px rgba(181, 50, 40, 0.12), inset 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
-.board-hero-sub {
-  margin: 10px 0 0;
-  color: var(--ink-soft);
-  font-size: 14px;
-  line-height: 1.65;
-  max-width: 520px;
-}
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  align-content: stretch;
-}
-
-.stat-tile {
-  min-width: 0;
-  background: rgba(255, 250, 240, 0.78);
-  border: 1px solid rgba(214, 199, 155, 0.82);
-  border-radius: var(--radius);
-  padding: 12px;
+.xp-line {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  align-items: center;
   gap: 12px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-top: 1px dotted var(--line);
+  padding: 12px 0 0;
+  font-family: inherit;
+  text-align: left;
+  transition: opacity 0.12s ease;
 }
 
-.stat-tile span {
+.xp-line:active {
+  opacity: 0.75;
+}
+
+.xp-line-meta {
+  font-size: 11px;
   color: var(--ink-soft);
-  font-size: 12px;
-  line-height: 1.35;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.stat-tile strong {
-  font-family: var(--font-mono);
-  font-size: 19px;
-  color: var(--ink);
-  line-height: 1;
-}
-
-.stat-tile.strong {
-  background: var(--ink);
-  border-color: var(--ink);
-}
-
-.stat-tile.strong span {
-  color: rgba(253, 246, 232, 0.72);
-}
-
-.stat-tile.strong strong {
-  color: #fdf6e8;
-}
-
-@media (max-width: 860px) {
-  .board-hero {
-    grid-template-columns: 1fr;
-  }
-
-  .stat-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+  flex-shrink: 0;
 }
 
 @media (max-width: 520px) {
-  .board-hero {
-    padding: 16px;
+  .board-head {
+    padding: 14px 14px 12px;
   }
 
-  .stat-grid {
-    grid-template-columns: 1fr 1fr;
+  .today-seal {
+    width: 72px;
+    height: 72px;
+  }
+
+  .today-seal strong {
+    font-size: 22px;
   }
 }
 
@@ -1456,29 +1492,7 @@ input:focus-visible {
   }
 }
 
-/* ---------- 게임 HUD (도장판 상단) ---------- */
-
-.hud-board {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  background:
-    linear-gradient(90deg, rgba(169, 122, 36, 0.14), transparent 55%),
-    var(--paper-soft);
-  border: 1px solid rgba(185, 163, 110, 0.72);
-  border-radius: var(--radius);
-  padding: 12px 16px;
-  margin-bottom: 20px;
-  font-family: inherit;
-  box-shadow: var(--shadow-soft);
-  transition: transform 0.12s ease;
-  text-align: left;
-}
-
-.hud-board:active {
-  transform: scale(0.99);
-}
+/* ---------- XP 바 부품 (board-head와 마을 HUD가 같이 씀) ---------- */
 
 .hud-lv {
   background: linear-gradient(135deg, var(--stamp-red), var(--stamp-red-deep));
@@ -1525,39 +1539,6 @@ input:focus-visible {
   }
   to {
     transform: translateX(100%);
-  }
-}
-
-.hud-board-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--ink-soft);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.hud-board-today {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--teal);
-}
-
-.hud-board-today.done {
-  color: var(--gold);
-}
-
-@media (max-width: 480px) {
-  .hud-board {
-    gap: 10px;
-    padding: 10px 12px;
-  }
-
-  .hud-board-meta span:last-child {
-    display: none;
   }
 }
 
@@ -1609,6 +1590,223 @@ input:focus-visible {
 
 .notify-btn:hover {
   border-color: var(--gold);
+}
+
+/* ---------- 콕 찌르기 ---------- */
+
+.column-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.poke-btn {
+  background: rgba(46, 107, 94, 0.08);
+  border: 1px solid rgba(46, 107, 94, 0.35);
+  border-radius: 999px;
+  color: var(--teal);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  transition: transform 0.1s ease, background 0.15s ease;
+}
+
+.poke-btn:hover {
+  background: rgba(46, 107, 94, 0.16);
+}
+
+.poke-btn:active {
+  transform: scale(0.92) rotate(-4deg);
+}
+
+.reminder-banner.poke-banner {
+  background: rgba(46, 107, 94, 0.1);
+  border-color: rgba(46, 107, 94, 0.4);
+  color: var(--teal);
+}
+
+.reminder-banner.poke-banner button {
+  color: var(--teal);
+}
+
+/* ---------- 어제 못 찍은 도장 (이유 남기기) ---------- */
+
+.missed-panel {
+  background:
+    linear-gradient(135deg, rgba(169, 122, 36, 0.12), transparent 50%),
+    rgba(248, 242, 226, 0.9);
+  border: 1px solid rgba(169, 122, 36, 0.5);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-soft);
+}
+
+.missed-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 12px;
+}
+
+.missed-head strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.missed-head span {
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.missed-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.missed-panel li {
+  border-top: 1px dotted var(--line);
+  padding-top: 10px;
+}
+
+.missed-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.missed-goal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.missed-goal .icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: rgba(169, 122, 36, 0.12);
+  font-size: 14px;
+}
+
+.missed-stamp {
+  background: none;
+  border: none;
+  color: var(--teal);
+  font-size: 12px;
+  text-decoration: underline;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+
+.missed-form {
+  display: flex;
+  gap: 8px;
+}
+
+.missed-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  font-family: var(--font-body);
+  background: #fff;
+}
+
+.missed-form .btn-primary {
+  padding: 9px 14px;
+  white-space: nowrap;
+}
+
+.missed-form .btn-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* ---------- 반성 노트 (기록 탭) ---------- */
+
+.reflect {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dotted var(--line);
+}
+
+.reflect-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.reflect-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.reflect-count {
+  font-size: 11.5px;
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.reflect-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reflect-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  background: rgba(255, 250, 240, 0.7);
+  border: 1px solid rgba(214, 199, 155, 0.55);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.reflect-date {
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 30px;
+}
+
+.reflect-goal {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+  color: var(--ink-soft);
+}
+
+.reflect-text {
+  flex: 1;
+  min-width: 120px;
+  word-break: break-word;
+  color: var(--ink);
 }
 
 /* ---------- History (월간 기록) ---------- */

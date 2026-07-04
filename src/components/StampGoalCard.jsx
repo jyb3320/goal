@@ -32,6 +32,13 @@ export default function StampGoalCard({
         return streak > 0 ? `연속 ${streak}일` : "오늘부터";
       })();
 
+  // 손으로 찍은 느낌 — 날짜별로 늘 같은, 살짝 비뚤어진 각도
+  const sealRot = (key) => {
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) | 0;
+    return (Math.abs(h) % 13) - 6;
+  };
+
   const stamp = (d, e) => {
     const key = `${goal.id}_${d}`;
     if (!checkinSet.has(key)) {
@@ -93,7 +100,13 @@ export default function StampGoalCard({
                 onClick={(e) => clickable && stamp(d, e)}
                 aria-label={`${d} ${filled ? "완료" : "미완료"}`}
                 title={isYesterday && isMine ? "어제 것도 소급해서 찍을 수 있어요" : undefined}
-              />
+              >
+                {filled && (
+                  <span className="seal-char" style={{ transform: `rotate(${sealRot(key)}deg)` }}>
+                    {dowOf(d)}
+                  </span>
+                )}
+              </button>
             </div>
           );
         })}
