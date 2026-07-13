@@ -215,34 +215,29 @@ export default function App() {
   // ----- 주간 요약 -----
   const weeklySummary = useMemo(() => {
     const thisWeek = weekDates(0);
+    const weekStart = thisWeek[0];
     const elapsed = thisWeek.filter((d) => d <= todayStr(0));
-    const weekSet = new Set(thisWeek);
+    const today = todayStr(0);
 
     const statsFor = (user) => {
-      const goals = state.goals.filter((g) => g.owner === user && visibleGoal(g));
-      let done = 0;
-      let possible = 0;
-      let stamps = 0;
+      const goals = state.goals.filter(
+        (g) => g.owner === user && visibleGoal(g) && (!g.createdAt || g.createdAt <= today)
+      );
+      let completed = 0;
+      let total = 0;
       for (const g of goals) {
         if (g.type === "milestone") {
-          // 되돌리기(-)까지 반영해서, 실제로 진행한 날만 센다
-          const byDate = new Map();
-          for (const p of state.progress) {
-            if (p.goalId === g.id && weekSet.has(p.date)) {
-              byDate.set(p.date, (byDate.get(p.date) || 0) + p.amount);
-            }
-          }
-          stamps += [...byDate.values()].filter((v) => v > 0).length;
+          total++;
+          if ((progressSum[g.id] || 0) >= g.target) completed++;
           continue;
         }
-        const weekChecks = thisWeek.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
-        stamps += weekChecks;
-        // 주중에 새로 만든 목표는 만들기 전 요일을 미달성으로 치지 않음
-        const active = elapsed.filter((d) => !g.createdAt || d >= g.createdAt);
-        possible += active.length;
-        done += active.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
+        if (g.type !== "daily") continue;
+        const active = elapsed.filter((d) => d >= weekStart && (!g.createdAt || d >= g.createdAt));
+        if (active.length === 0) continue;
+        total++;
+        if (active.some((d) => checkinSet.has(`${g.id}_${d}`))) completed++;
       }
-      return { user, stamps, done, possible, rate: possible > 0 ? done / possible : null };
+      return { user, completed, total, rate: total > 0 ? completed / total : null };
     };
 
     const mine = statsFor(me);
@@ -254,7 +249,7 @@ export default function App() {
       else verdict = "막상막하! 🤜🤛";
     }
     return { mine, theirs, verdict };
-  }, [state.goals, state.progress, checkinSet, me, otherName]);
+  }, [state.goals, progressSum, checkinSet, me, otherName]);
 
   // ----- 리마인더 배너 (밤 9시 이후 안 찍은 도장) -----
   const reminder = useMemo(() => {

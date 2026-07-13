@@ -17,7 +17,9 @@ export default function WeekSummary({ summary }) {
               />
             </div>
             <span className="ws-stat">
-              {s.rate !== null ? `${Math.round(s.rate * 100)}%` : "—"} · 도장 {s.stamps}개
+              {s.rate !== null
+                ? `${Math.round(s.rate * 100)}% · ${s.completed} / ${s.total} 목표`
+                : "집계할 목표 없음"}
             </span>
           </div>
         ))}
