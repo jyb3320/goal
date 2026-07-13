@@ -181,7 +181,7 @@ export default function App() {
       const ok = await mutate({ action: "subscribePush", subscription: sub });
       if (ok) {
         setPushOn(true);
-        showToast("밤 9시에 안 찍은 도장을 알려줄게요 🔔");
+        showToast("도장 리마인더와 응원 알림을 켰어요 🔔");
       }
     } catch (e) {
       console.error("push subscribe failed", e);
@@ -512,7 +512,7 @@ export default function App() {
         <span className="range-short">최근 7일 기록</span>
         {pushKey && pushSupported() && !pushOn && (
           <button type="button" className="notify-btn" onClick={enablePush}>
-            🔔 밤 9시 알림 켜기
+            🔔 알림 켜기
           </button>
         )}
       </div>
