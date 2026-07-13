@@ -62,15 +62,13 @@ function MemoForm({ initial = EMPTY_FORM, submitLabel, onSubmit, onCancel }) {
 
   return (
     <div className="memo-form">
-      <div className="memo-type-row">
-        <div className="type-selector memo-type-selector">
-          <button type="button" className={form.goalType === "daily" ? "selected" : ""} onClick={() => set("goalType", "daily")}>
-            매일 목표
-          </button>
-          <button type="button" className={form.goalType === "milestone" ? "selected" : ""} onClick={() => set("goalType", "milestone")}>
-            기간 목표
-          </button>
-        </div>
+      <div className="type-selector memo-type-selector">
+        <button type="button" className={form.goalType === "daily" ? "selected" : ""} onClick={() => set("goalType", "daily")}>
+          매일 목표
+        </button>
+        <button type="button" className={form.goalType === "milestone" ? "selected" : ""} onClick={() => set("goalType", "milestone")}>
+          기간 목표
+        </button>
       </div>
 
       <input
@@ -111,11 +109,9 @@ function MemoForm({ initial = EMPTY_FORM, submitLabel, onSubmit, onCancel }) {
         ))}
       </div>
       <div className="memo-form-actions">
-        {onCancel && (
-          <button type="button" className="btn-ghost" onClick={onCancel}>
-            취소
-          </button>
-        )}
+        <button type="button" className="btn-ghost" onClick={onCancel}>
+          취소
+        </button>
         <button type="button" className="btn-primary" disabled={!canSubmit} onClick={submit}>
           {submitLabel}
         </button>
@@ -124,7 +120,7 @@ function MemoForm({ initial = EMPTY_FORM, submitLabel, onSubmit, onCancel }) {
   );
 }
 
-function MemoCard({ memo, isMine, onUpdate, onDelete, onConvert }) {
+function MemoCard({ memo, onUpdate, onDelete, onConvert }) {
   const [editing, setEditing] = useState(false);
   const dday = daysUntil(memo.plannedDate);
   const soon = dday !== null && dday >= 0 && dday <= 7;
@@ -167,46 +163,37 @@ function MemoCard({ memo, isMine, onUpdate, onDelete, onConvert }) {
           <span>마감일 {memo.deadline || "-"}</span>
         </div>
       )}
-      {isMine && (
-        <div className="memo-actions">
-          <button type="button" onClick={() => setEditing(true)}>
-            수정
-          </button>
-          <button type="button" onClick={() => onDelete(memo.id)}>
-            삭제
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={missingMilestoneFields}
-            title={missingMilestoneFields ? "기간 목표는 목표량과 마감일이 필요해요" : undefined}
-            onClick={() => onConvert(memo.id)}
-          >
-            현황판에 올리기
-          </button>
-        </div>
-      )}
+      <div className="memo-actions">
+        <button type="button" onClick={() => setEditing(true)}>
+          수정
+        </button>
+        <button type="button" onClick={() => onDelete(memo.id)}>
+          삭제
+        </button>
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={missingMilestoneFields}
+          title={missingMilestoneFields ? "기간 목표는 목표량과 마감일이 필요해요" : undefined}
+          onClick={() => onConvert(memo.id)}
+        >
+          현황판에 올리기
+        </button>
+      </div>
     </article>
   );
 }
 
-export default function GoalMemoView({ memos, me, otherName, onAdd, onUpdate, onDelete, onConvert }) {
+export default function GoalMemoPanel({ memos, onAdd, onUpdate, onDelete, onConvert }) {
   const [adding, setAdding] = useState(false);
-  const activeMemos = (memos || []).filter((m) => !m.convertedAt);
-  const mine = activeMemos.filter((m) => m.owner === me);
-  const theirs = otherName ? activeMemos.filter((m) => m.owner === otherName) : [];
 
   return (
-    <div className="memo-view">
-      <section className="memo-head">
-        <div>
-          <p className="eyebrow">나중에 올릴 목표</p>
-          <h2>목표 메모함</h2>
-        </div>
-        <button type="button" className="btn-primary" onClick={() => setAdding((v) => !v)}>
-          {adding ? "닫기" : "+ 메모 추가"}
+    <div className="memo-panel">
+      <div className="memo-add-row">
+        <button className="add-goal-trigger" onClick={() => setAdding(true)} type="button">
+          + 메모 추가
         </button>
-      </section>
+      </div>
 
       {adding && (
         <MemoForm
@@ -219,39 +206,19 @@ export default function GoalMemoView({ memos, me, otherName, onAdd, onUpdate, on
         />
       )}
 
-      <div className="memo-columns">
-        <section className="memo-section">
-          <div className="column-head">
-            <h3>내 메모</h3>
-            <span className="tag">{mine.length}개</span>
+      {memos.length > 0 && (
+        <section className="memo-section inline">
+          <div className="memo-section-head">
+            <h4>목표 메모</h4>
+            <span className="tag">{memos.length}개</span>
           </div>
           <div className="memo-list">
-            {mine.length === 0 ? (
-              <div className="empty-note">나중에 올릴 목표를 메모해두면 여기 쌓여요.</div>
-            ) : (
-              mine.map((memo) => (
-                <MemoCard key={memo.id} memo={memo} isMine onUpdate={onUpdate} onDelete={onDelete} onConvert={onConvert} />
-              ))
-            )}
+            {memos.map((memo) => (
+              <MemoCard key={memo.id} memo={memo} onUpdate={onUpdate} onDelete={onDelete} onConvert={onConvert} />
+            ))}
           </div>
         </section>
-
-        <section className="memo-section">
-          <div className="column-head">
-            <h3>{otherName || "친구"} 메모</h3>
-            <span className="tag">{otherName ? `${theirs.length}개` : "대기 중"}</span>
-          </div>
-          <div className="memo-list">
-            {theirs.length === 0 ? (
-              <div className="empty-note">
-                {otherName ? "친구의 메모가 아직 없어요." : "친구가 들어오면 친구 메모도 여기 보여요."}
-              </div>
-            ) : (
-              theirs.map((memo) => <MemoCard key={memo.id} memo={memo} isMine={false} />)
-            )}
-          </div>
-        </section>
-      </div>
+      )}
     </div>
   );
 }

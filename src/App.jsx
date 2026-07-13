@@ -10,7 +10,7 @@ import AddGoalForm from "./components/AddGoalForm.jsx";
 import MessageBoard from "./components/MessageBoard.jsx";
 import WeekSummary from "./components/WeekSummary.jsx";
 import HistoryView from "./components/HistoryView.jsx";
-import GoalMemoView from "./components/GoalMemoView.jsx";
+import GoalMemoPanel from "./components/GoalMemoPanel.jsx";
 import MissedPanel from "./components/MissedPanel.jsx";
 import Toast from "./components/Toast.jsx";
 
@@ -34,7 +34,7 @@ function pickState(data) {
 
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
-  const [view, setView] = useState("board"); // 'board' | 'village' | 'history' | 'memos'
+  const [view, setView] = useState("board"); // 'board' | 'village' | 'history'
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
@@ -204,6 +204,7 @@ export default function App() {
   const visibleGoal = (g) => g.type !== "weekly" && g.status !== "failed";
   const myGoals = state.goals.filter((g) => g.owner === me && visibleGoal(g));
   const otherGoals = otherName ? state.goals.filter((g) => g.owner === otherName && visibleGoal(g)) : [];
+  const myGoalMemos = state.goalMemos.filter((m) => m.owner === me && !m.convertedAt);
 
   const progressSum = useMemo(() => {
     const map = {};
@@ -542,9 +543,6 @@ export default function App() {
         <button type="button" className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
           📅 기록
         </button>
-        <button type="button" className={view === "memos" ? "active" : ""} onClick={() => setView("memos")}>
-          📝 메모함
-        </button>
       </div>
 
       {view === "village" && <Village state={state} me={me} otherName={otherName} />}
@@ -557,18 +555,6 @@ export default function App() {
           excuses={state.excuses}
           me={me}
           otherName={otherName}
-        />
-      )}
-
-      {view === "memos" && (
-        <GoalMemoView
-          memos={state.goalMemos}
-          me={me}
-          otherName={otherName}
-          onAdd={addGoalMemo}
-          onUpdate={updateGoalMemo}
-          onDelete={deleteGoalMemo}
-          onConvert={convertGoalMemo}
         />
       )}
 
@@ -651,10 +637,19 @@ export default function App() {
                 {adding ? (
                   <AddGoalForm onAdd={addGoal} onCancel={() => setAdding(false)} />
                 ) : (
-                  <button className="add-goal-trigger" onClick={() => setAdding(true)} type="button">
-                    + 목표 추가
-                  </button>
+                  <div className="add-action-row">
+                    <button className="add-goal-trigger" onClick={() => setAdding(true)} type="button">
+                      + 목표 추가
+                    </button>
+                  </div>
                 )}
+                <GoalMemoPanel
+                  memos={myGoalMemos}
+                  onAdd={addGoalMemo}
+                  onUpdate={updateGoalMemo}
+                  onDelete={deleteGoalMemo}
+                  onConvert={convertGoalMemo}
+                />
               </div>
             </section>
 

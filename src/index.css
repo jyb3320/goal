@@ -1469,30 +1469,10 @@ input:focus-visible {
 
 /* ---------- Goal memo box ---------- */
 
-.memo-view {
+.add-action-row,
+.memo-add-row {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.memo-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background:
-    linear-gradient(90deg, rgba(46, 107, 94, 0.1), transparent 42%),
-    rgba(248, 242, 226, 0.86);
-  border: 1px solid rgba(185, 163, 110, 0.72);
-  border-radius: var(--radius);
-  padding: 16px;
-  box-shadow: var(--shadow-soft);
-}
-
-.memo-head h2 {
-  margin: 2px 0 0;
-  font-family: var(--font-display);
-  font-size: 22px;
+  gap: 8px;
 }
 
 .memo-form {
@@ -1501,6 +1481,10 @@ input:focus-visible {
   border-radius: var(--radius);
   padding: 14px;
   box-shadow: var(--shadow-soft);
+}
+
+.memo-panel .memo-form {
+  margin-top: 10px;
 }
 
 .memo-form input,
@@ -1522,7 +1506,6 @@ input:focus-visible {
   margin-top: 8px;
 }
 
-.memo-type-row,
 .memo-form .field-row,
 .memo-icon-picker {
   margin-top: 8px;
@@ -1545,14 +1528,28 @@ input:focus-visible {
   cursor: default;
 }
 
-.memo-columns {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-}
-
 .memo-section {
   min-width: 0;
+}
+
+.memo-section.inline {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dotted var(--line);
+}
+
+.memo-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.memo-section-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
 }
 
 .memo-list {
@@ -1650,17 +1647,9 @@ input:focus-visible {
 }
 
 @media (max-width: 720px) {
-  .memo-columns {
-    grid-template-columns: 1fr;
-  }
-
-  .memo-head {
-    align-items: flex-start;
+  .add-action-row,
+  .memo-add-row {
     flex-direction: column;
-  }
-
-  .memo-head .btn-primary {
-    width: 100%;
   }
 }
 
