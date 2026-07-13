@@ -1305,6 +1305,28 @@ input:focus-visible {
   background: linear-gradient(90deg, var(--gold), #c79436);
 }
 
+.milestone-expired {
+  border-color: rgba(181, 50, 40, 0.46);
+  background:
+    linear-gradient(135deg, rgba(181, 50, 40, 0.08), transparent 44%),
+    linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(248, 242, 226, 0.98));
+}
+
+.milestone-expired .milestone-fill {
+  background: linear-gradient(90deg, var(--stamp-red-deep), var(--stamp-red));
+}
+
+.expired-note {
+  margin: 8px 0 10px;
+  padding: 8px 10px;
+  border: 1px dotted rgba(181, 50, 40, 0.42);
+  border-radius: var(--radius);
+  background: rgba(181, 50, 40, 0.06);
+  color: var(--stamp-red-deep);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .milestone-meta {
   display: flex;
   align-items: baseline;
@@ -1385,6 +1407,64 @@ input:focus-visible {
 
 .amt-btn.plus:hover {
   background: rgba(181, 50, 40, 0.14);
+}
+
+.failure-trigger {
+  border: 1px solid rgba(181, 50, 40, 0.45);
+  border-radius: var(--radius);
+  background: rgba(181, 50, 40, 0.08);
+  color: var(--stamp-red-deep);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.failure-form {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dotted var(--line);
+}
+
+.failure-form textarea {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+
+.failure-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.failure-actions button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  padding: 7px 12px;
+}
+
+.failure-actions .btn-primary {
+  background: var(--stamp-red);
+  color: #fdf6e8;
+  border-color: var(--stamp-red);
+}
+
+.failure-actions .btn-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 /* ---------- Message board ---------- */
@@ -1822,6 +1902,63 @@ input:focus-visible {
   min-width: 120px;
   word-break: break-word;
   color: var(--ink);
+}
+
+.failed-reflect {
+  border-top-style: solid;
+}
+
+.failed-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.failed-list li {
+  background: rgba(255, 250, 240, 0.78);
+  border: 1px solid rgba(181, 50, 40, 0.24);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.failed-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.failed-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+}
+
+.failed-rate {
+  color: var(--stamp-red);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.failed-meta {
+  margin-top: 5px;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+
+.failed-list p {
+  margin: 5px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 /* ---------- History (월간 기록) ---------- */

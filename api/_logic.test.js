@@ -232,8 +232,70 @@ describe("반성 노트 (못 찍은 이유)", () => {
   });
 });
 
+describe("기간 목표 실패 기록", () => {
+  function boardWithMilestone(overrides = {}, progress = []) {
+    let raw = normalize({
+      users: ["햄", "쥐"],
+      goals: [
+        {
+          id: "m1",
+          owner: "햄",
+          title: "지원서 5개 제출",
+          icon: "📘",
+          type: "milestone",
+          target: 5,
+          unit: "개",
+          createdAt: shiftDate(seoulToday(), -10),
+          deadline: shiftDate(seoulToday(), -1),
+          status: "active",
+          ...overrides,
+        },
+      ],
+      progress,
+    });
+    return {
+      post(body) {
+        const o = handlePost(raw, body);
+        if (o.write) raw = o.state;
+        return o;
+      },
+    };
+  }
+
+  it("마감일 다음 날 미달성 기간 목표에 실패 이유를 저장한다", () => {
+    const b = boardWithMilestone({}, [{ id: "p1", goalId: "m1", date: seoulToday(), amount: 3 }]);
+    const r = b.post({ action: "addFailureReason", name: "햄", goalId: "m1", text: "시간 배분을 못 했음" });
+    const goal = r.respond.goals[0];
+    expect(r.status).toBe(200);
+    expect(goal.status).toBe("failed");
+    expect(goal.failureReason).toBe("시간 배분을 못 했음");
+    expect(goal.finalAmount).toBe(3);
+    expect(goal.failedDate).toBe(seoulToday());
+    expect(goal.expiredAt).toBe(seoulToday());
+  });
+
+  it("마감일 당일에는 실패 이유를 저장할 수 없다", () => {
+    const b = boardWithMilestone({ deadline: seoulToday() });
+    const r = b.post({ action: "addFailureReason", name: "햄", goalId: "m1", text: "아직 당일" });
+    expect(r.status).toBe(400);
+  });
+
+  it("이미 달성한 기간 목표는 실패 처리하지 않는다", () => {
+    const b = boardWithMilestone({}, [{ id: "p1", goalId: "m1", date: seoulToday(), amount: 5 }]);
+    const r = b.post({ action: "addFailureReason", name: "햄", goalId: "m1", text: "x" });
+    expect(r.status).toBe(400);
+    expect(r.respond.error).toBe("이미 달성한 목표예요");
+  });
+
+  it("실패 기록이 끝난 기간 목표에는 진행 수량을 추가할 수 없다", () => {
+    const b = boardWithMilestone({ status: "failed", failureReason: "못 함" });
+    const r = b.post({ action: "addProgress", name: "햄", goalId: "m1", amount: 1 });
+    expect(r.status).toBe(400);
+  });
+});
+
 describe("리마인더 카운트", () => {
-  it("매일 목표 미체크는 카운트, 주간 목표는 달성/오늘 체크 시 제외", () => {
+  it("매일 목표 미체크만 카운트하고 기존 weekly 데이터는 무시", () => {
     const today = seoulToday();
     const state = normalize({
       users: ["햄"],
@@ -242,8 +304,19 @@ describe("리마인더 카운트", () => {
         { id: "w1", owner: "햄", title: "b", type: "weekly", targetPerWeek: 1 },
         { id: "m1", owner: "햄", title: "c", type: "milestone", target: 5 },
       ],
-      checkins: [{ goalId: "w1", date: today }],
     });
     expect(countMissedToday(state, "햄", today)).toBe(1);
+  });
+
+  it("weekly 타입으로 새 목표를 보내도 daily로 생성", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const r = b.post({
+      action: "addGoal",
+      name: "햄",
+      goal: { title: "예전 주간 목표", type: "weekly", targetPerWeek: 3 },
+    });
+    expect(r.respond.goals[0].type).toBe("daily");
+    expect(r.respond.goals[0].targetPerWeek).toBeUndefined();
   });
 });

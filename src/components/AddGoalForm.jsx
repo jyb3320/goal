@@ -3,13 +3,12 @@ import { todayStr } from "../lib/dates.js";
 import { onEnter } from "../lib/ime.js";
 
 const ICONS = ["🏃", "💧", "📖", "🧘", "🛌", "💪", "🥗", "✍️", "🎯", "🌱"];
-const GOAL_TYPE_LABEL = { daily: "매일", weekly: "주 N회", milestone: "기간 목표" };
+const GOAL_TYPE_LABEL = { daily: "매일", milestone: "기간 목표" };
 
 export default function AddGoalForm({ onAdd, onCancel }) {
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState(ICONS[0]);
   const [type, setType] = useState("daily");
-  const [targetPerWeek, setTargetPerWeek] = useState(3);
   const [target, setTarget] = useState("");
   const [unit, setUnit] = useState("");
   const [deadline, setDeadline] = useState("");
@@ -18,7 +17,6 @@ export default function AddGoalForm({ onAdd, onCancel }) {
     if (!title.trim()) return;
     if (type === "milestone" && (!target || parseInt(target, 10) < 1)) return;
     const goal = { title: title.trim(), icon, type };
-    if (type === "weekly") goal.targetPerWeek = targetPerWeek;
     if (type === "milestone") {
       goal.target = parseInt(target, 10);
       goal.unit = unit.trim() || "개";
@@ -45,18 +43,6 @@ export default function AddGoalForm({ onAdd, onCancel }) {
         }
         onKeyDown={(e) => onEnter(e, submit)}
       />
-      {type === "weekly" && (
-        <div className="field-row">
-          <label>일주일에</label>
-          <select value={targetPerWeek} onChange={(e) => setTargetPerWeek(parseInt(e.target.value, 10))}>
-            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-              <option key={n} value={n}>
-                {n}회
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
       {type === "milestone" && (
         <>
           <div className="field-row">

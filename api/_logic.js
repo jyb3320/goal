@@ -3,7 +3,7 @@
 
 export const KEY = "goaltracker:state";
 export const MAX_USERS = 2;
-export const GOAL_TYPES = ["daily", "weekly", "milestone"];
+export const GOAL_TYPES = ["daily", "milestone"];
 
 // 기록 보존 기간 — 지나면 컴팩션 대상
 const REACTION_KEEP_DAYS = 14; // UI가 최근 7일만 보여줌
@@ -120,6 +120,12 @@ function findGoal(state, goalId) {
   return state.goals.find((g) => g.id === goalId) || null;
 }
 
+function progressTotal(state, goalId) {
+  return state.progress
+    .filter((p) => p.goalId === goalId)
+    .reduce((sum, p) => sum + p.amount, 0);
+}
+
 // 상태가 무한히 크지 않게: 오래된 기록을 지우거나 집계로 합친다.
 // XP는 아카이브 집계(archive[user].stamps)로 보존된다.
 export function compact(state, today = seoulToday()) {
@@ -182,13 +188,11 @@ export function applyAction(state, body, user) {
         type: GOAL_TYPES.includes(g.type) ? g.type : "daily",
         createdAt: today,
       };
-      if (goal.type === "weekly") {
-        goal.targetPerWeek = Math.min(7, Math.max(1, int(g.targetPerWeek, 3)));
-      }
       if (goal.type === "milestone") {
         goal.target = Math.max(1, int(g.target, 1));
         goal.unit = str(g.unit, 10) || "개";
         goal.deadline = str(g.deadline, 10);
+        goal.status = "active";
       }
       state.goals.push(goal);
       return {};
@@ -233,15 +237,47 @@ export function applyAction(state, body, user) {
       if (!goal || amount === 0) return { error: "invalid progress", status: 400 };
       if (goal.owner !== user) return { error: "본인 목표만 기록할 수 있어요", status: 403 };
       if (goal.type !== "milestone") return { error: "기간 목표가 아니에요", status: 400 };
+      if (goal.status === "failed") return { error: "실패 기록이 끝난 목표예요", status: 400 };
       if (amount < 0) {
         // 누적치가 0 밑으로 내려가지 않게 (숨은 음수 잔액 방지)
-        const current = state.progress
-          .filter((p) => p.goalId === goal.id)
-          .reduce((sum, p) => sum + p.amount, 0);
+        const current = progressTotal(state, goal.id);
         amount = Math.max(amount, -current);
         if (amount === 0) return { noop: true };
       }
       state.progress.push({ id: newId("p"), goalId: goal.id, date: today, amount });
+      const next = progressTotal(state, goal.id);
+      if (next >= goal.target) {
+        goal.status = "completed";
+        goal.completedAt = goal.completedAt || new Date().toISOString();
+      } else if (goal.status === "completed") {
+        goal.status = "active";
+        delete goal.completedAt;
+      }
+      return {};
+    }
+
+    case "addFailureReason": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      const text = str(body.text, 300);
+      if (!goal || !text) return { error: "invalid failure reason", status: 400 };
+      if (goal.owner !== user) return { error: "본인 목표에만 쓸 수 있어요", status: 403 };
+      if (goal.type !== "milestone") return { error: "기간 목표에만 실패 이유를 남겨요", status: 400 };
+      if (!goal.deadline || today <= goal.deadline) {
+        return { error: "아직 마감일이 지나지 않았어요", status: 400 };
+      }
+      const finalAmount = Math.max(0, progressTotal(state, goal.id));
+      if (finalAmount >= goal.target) {
+        goal.status = "completed";
+        goal.completedAt = goal.completedAt || new Date().toISOString();
+        return { error: "이미 달성한 목표예요", status: 400 };
+      }
+      goal.status = "failed";
+      goal.failureReason = text;
+      goal.failedAt = new Date().toISOString();
+      goal.failedDate = today;
+      goal.expiredAt = goal.expiredAt || today;
+      goal.originalDeadline = goal.originalDeadline || goal.deadline;
+      goal.finalAmount = finalAmount;
       return {};
     }
 
@@ -366,19 +402,14 @@ export function handlePost(rawState, body) {
   return { status: 200, respond: sanitize(state), state, write: true };
 }
 
-// 밤 9시 리마인더: 아직 오늘 몫을 안 채운 목표 수 (매일 + 주간)
+// 밤 9시 리마인더: 아직 오늘 몫을 안 채운 매일 목표 수
 export function countMissedToday(state, user, today = seoulToday()) {
-  const week = seoulWeekDates(today);
   const checked = new Set(state.checkins.map((c) => `${c.goalId}_${c.date}`));
   let missed = 0;
   for (const g of state.goals) {
     if (g.owner !== user) continue;
-    if (g.type === "milestone") continue;
+    if (g.type !== "daily") continue;
     if (checked.has(`${g.id}_${today}`)) continue;
-    if (g.type === "weekly") {
-      const weekChecks = week.filter((d) => checked.has(`${g.id}_${d}`)).length;
-      if (weekChecks >= g.targetPerWeek) continue; // 이번 주 목표 이미 달성
-    }
     missed++;
   }
   return missed;

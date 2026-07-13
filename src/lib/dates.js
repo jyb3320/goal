@@ -54,20 +54,6 @@ export function computeStreak(goalId, checkinSet) {
   return streak;
 }
 
-// 주 N회 목표: 목표 회수를 채운 연속 주 수 (이번 주는 채웠을 때만 포함)
-export function computeWeeklyStreak(goal, checkinSet) {
-  let streak = 0;
-  const countWeek = (off) =>
-    weekDates(off).filter((d) => checkinSet.has(`${goal.id}_${d}`)).length;
-  if (countWeek(0) >= goal.targetPerWeek) streak++;
-  let offset = -1;
-  while (countWeek(offset) >= goal.targetPerWeek) {
-    streak++;
-    offset--;
-  }
-  return streak;
-}
-
 export function ddayLabel(deadline) {
   if (!deadline) return null;
   const today = new Date(todayStr(0) + "T00:00:00");

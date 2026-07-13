@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ddayLabel } from "../lib/dates.js";
+import { ddayLabel, todayStr } from "../lib/dates.js";
 import { burst, bigBurst, stampSound, fanfareSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
 
@@ -10,14 +10,18 @@ export default function MilestoneGoalCard({
   reactions,
   me,
   onAddProgress,
+  onSaveFailureReason,
   onToggleReaction,
   onDelete,
 }) {
   const [amount, setAmountRaw] = useState(1);
+  const [reasonOpen, setReasonOpen] = useState(false);
+  const [failureReason, setFailureReason] = useState("");
   const setAmount = (v) => setAmountRaw(Math.max(1, Math.min(999, v || 1)));
 
   const pct = Math.min(100, Math.round((current / goal.target) * 100));
   const done = current >= goal.target;
+  const expired = goal.type === "milestone" && !done && goal.deadline && todayStr(0) > goal.deadline;
   const dday = ddayLabel(goal.deadline);
 
   const record = (delta, e) => {
@@ -40,8 +44,17 @@ export default function MilestoneGoalCard({
     }
   };
 
+  const saveFailureReason = (e) => {
+    e.preventDefault();
+    const text = failureReason.trim();
+    if (!text) return;
+    onSaveFailureReason(goal.id, text);
+    setFailureReason("");
+    setReasonOpen(false);
+  };
+
   return (
-    <div className={`goal-card ${done ? "milestone-done" : ""}`}>
+    <div className={`goal-card ${done ? "milestone-done" : ""} ${expired ? "milestone-expired" : ""}`}>
       <div className="goal-top">
         <div className="goal-title">
           <span className="icon">{goal.icon}</span>
@@ -49,9 +62,14 @@ export default function MilestoneGoalCard({
           <span className="type-tag">기간 목표</span>
         </div>
         <div className={`streak-badge ${done ? "done" : ""}`}>
-          {done ? "달성! 🎉" : dday || "기한 없음"}
+          {done ? "달성! 🎉" : expired ? "실패 이유 필요" : dday || "기한 없음"}
         </div>
       </div>
+      {expired && (
+        <div className="expired-note">
+          마감일이 지났어요. 실패 이유를 남기면 현황판에서 정리되고 기록-반성 노트에 보관돼요.
+        </div>
+      )}
       <div className="milestone-bar">
         <div className="milestone-fill" style={{ width: `${pct}%` }} />
       </div>
@@ -64,7 +82,7 @@ export default function MilestoneGoalCard({
       <div className="goal-foot">
         <Reactions goal={goal} isMine={isMine} reactions={reactions} me={me} onToggle={onToggleReaction} />
         <div className="foot-right">
-          {isMine && !done && (
+          {isMine && !done && !expired && (
             <div className="progress-controls">
               <button type="button" className="amt-btn" onClick={(e) => record(-amount, e)} title="기록 되돌리기">
                 −
@@ -82,6 +100,11 @@ export default function MilestoneGoalCard({
               </button>
             </div>
           )}
+          {isMine && expired && (
+            <button className="failure-trigger" onClick={() => setReasonOpen((v) => !v)} type="button">
+              실패 이유 기록
+            </button>
+          )}
           {isMine && (
             <button className="delete-goal" onClick={() => onDelete(goal)} type="button">
               삭제
@@ -89,6 +112,25 @@ export default function MilestoneGoalCard({
           )}
         </div>
       </div>
+      {isMine && expired && reasonOpen && (
+        <form className="failure-form" onSubmit={saveFailureReason}>
+          <textarea
+            value={failureReason}
+            onChange={(e) => setFailureReason(e.target.value)}
+            placeholder="왜 달성하지 못했는지 짧게 남겨주세요."
+            maxLength={300}
+            autoFocus
+          />
+          <div className="failure-actions">
+            <button type="button" onClick={() => setReasonOpen(false)}>
+              취소
+            </button>
+            <button type="submit" className="btn-primary" disabled={!failureReason.trim()}>
+              저장
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

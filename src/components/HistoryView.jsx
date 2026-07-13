@@ -63,6 +63,15 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
       .map((x) => ({ ...x, goal: goalById.get(x.goalId) || null }));
   }, [excuses, goals, who, monthPrefix]);
 
+  const failedMilestones = useMemo(() => {
+    return goals
+      .filter((g) => {
+        const failedDate = g.failedDate || (g.failedAt || "").slice(0, 10);
+        return g.owner === who && g.type === "milestone" && g.status === "failed" && failedDate.startsWith(monthPrefix);
+      })
+      .sort((a, b) => ((a.failedDate || a.failedAt || "") < (b.failedDate || b.failedAt || "") ? 1 : -1));
+  }, [goals, who, monthPrefix]);
+
   return (
     <div className="history">
       <div className="history-controls">
@@ -164,6 +173,40 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
                 <span className="reflect-text">{x.text}</span>
               </li>
             ))}
+          </ul>
+        </div>
+      )}
+
+      {failedMilestones.length > 0 && (
+        <div className="reflect failed-reflect">
+          <div className="reflect-head">
+            <span className="reflect-title">실패한 기간 목표</span>
+            <span className="reflect-count">{failedMilestones.length}개 기록</span>
+          </div>
+          <ul className="failed-list">
+            {failedMilestones.map((goal) => {
+              const failedDate = goal.failedDate || (goal.failedAt || "").slice(0, 10);
+              const finalAmount = Math.max(0, goal.finalAmount || 0);
+              const target = Math.max(1, goal.target || 1);
+              const pct = Math.min(100, Math.round((finalAmount / target) * 100));
+              return (
+                <li key={goal.id}>
+                  <div className="failed-row">
+                    <span className="reflect-date">{parseInt(failedDate.slice(8), 10)}일</span>
+                    <strong className="failed-title">
+                      {goal.icon} {goal.title}
+                    </strong>
+                    <span className="failed-rate">
+                      {finalAmount} / {target} {goal.unit} · {pct}%
+                    </span>
+                  </div>
+                  <div className="failed-meta">
+                    마감일 {goal.originalDeadline || goal.deadline || "-"} · 실패 이유
+                  </div>
+                  <p>{goal.failureReason}</p>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -3,7 +3,6 @@ import {
   todayStr,
   weekDates,
   computeStreak,
-  computeWeeklyStreak,
   ddayLabel,
 } from "./dates.js";
 
@@ -47,16 +46,6 @@ describe("dates", () => {
 
   it("computeStreak: 어제 끊겼으면 0", () => {
     expect(computeStreak("g", new Set(["g_2026-07-01"]))).toBe(0);
-  });
-
-  it("computeWeeklyStreak: 채운 연속 주 수", () => {
-    const goal = { id: "g", targetPerWeek: 2 };
-    // 이번 주 2회 + 지난 주 2회
-    const set = new Set(["g_2026-06-29", "g_2026-07-01", "g_2026-06-22", "g_2026-06-24"]);
-    expect(computeWeeklyStreak(goal, set)).toBe(2);
-    // 이번 주 아직 못 채워도 지난 주 기록은 유지
-    const set2 = new Set(["g_2026-06-22", "g_2026-06-24"]);
-    expect(computeWeeklyStreak(goal, set2)).toBe(1);
   });
 
   it("ddayLabel", () => {

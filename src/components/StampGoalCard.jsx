@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { last14, todayStr, dowOf, weekDates, computeStreak, computeWeeklyStreak } from "../lib/dates.js";
+import { last14, todayStr, dowOf, computeStreak } from "../lib/dates.js";
 import { burst, stampSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
 
@@ -20,23 +20,12 @@ export default function StampGoalCard({
   useEffect(() => () => clearTimeout(timerRef.current), []);
 
   const days = last14();
-  const isWeekly = goal.type === "weekly";
   // 못 찍은 날 남긴 이유 — 칸에 ✕로 표시하고, 누르면 이유가 보인다
   const excuseByDate = new Map(
     (excuses || []).filter((x) => x.goalId === goal.id).map((x) => [x.date, x.text])
   );
-  const thisWeek = weekDates(0);
-  const weekDone = thisWeek.filter((d) => checkinSet.has(`${goal.id}_${d}`)).length;
-  const badge = isWeekly
-    ? (() => {
-        const streak = computeWeeklyStreak(goal, checkinSet);
-        const base = `이번 주 ${Math.min(weekDone, goal.targetPerWeek)}/${goal.targetPerWeek}`;
-        return streak > 0 ? `${base} · ${streak}주 연속` : base;
-      })()
-    : (() => {
-        const streak = computeStreak(goal.id, checkinSet);
-        return streak > 0 ? `연속 ${streak}일` : "오늘부터";
-      })();
+  const streak = computeStreak(goal.id, checkinSet);
+  const badge = streak > 0 ? `연속 ${streak}일` : "오늘부터";
 
   // 손으로 찍은 느낌 — 날짜별로 늘 같은, 살짝 비뚤어진 각도
   const sealRot = (key) => {
@@ -76,7 +65,6 @@ export default function StampGoalCard({
         <div className="goal-title">
           <span className="icon">{goal.icon}</span>
           {goal.title}
-          {isWeekly && <span className="type-tag">주 {goal.targetPerWeek}회</span>}
         </div>
         <div className={`streak-badge ${badge.startsWith("오늘부터") ? "zero" : ""}`}>{badge}</div>
       </div>

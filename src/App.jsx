@@ -199,8 +199,9 @@ export default function App() {
     [state.users, me]
   );
 
-  const myGoals = state.goals.filter((g) => g.owner === me);
-  const otherGoals = otherName ? state.goals.filter((g) => g.owner === otherName) : [];
+  const visibleGoal = (g) => g.type !== "weekly" && g.status !== "failed";
+  const myGoals = state.goals.filter((g) => g.owner === me && visibleGoal(g));
+  const otherGoals = otherName ? state.goals.filter((g) => g.owner === otherName && visibleGoal(g)) : [];
 
   const progressSum = useMemo(() => {
     const map = {};
@@ -218,7 +219,7 @@ export default function App() {
     const weekSet = new Set(thisWeek);
 
     const statsFor = (user) => {
-      const goals = state.goals.filter((g) => g.owner === user);
+      const goals = state.goals.filter((g) => g.owner === user && visibleGoal(g));
       let done = 0;
       let possible = 0;
       let stamps = 0;
@@ -236,15 +237,10 @@ export default function App() {
         }
         const weekChecks = thisWeek.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
         stamps += weekChecks;
-        if (g.type === "weekly") {
-          possible += g.targetPerWeek;
-          done += Math.min(g.targetPerWeek, weekChecks);
-        } else {
-          // 주중에 새로 만든 목표는 만들기 전 요일을 미달성으로 치지 않음
-          const active = elapsed.filter((d) => !g.createdAt || d >= g.createdAt);
-          possible += active.length;
-          done += active.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
-        }
+        // 주중에 새로 만든 목표는 만들기 전 요일을 미달성으로 치지 않음
+        const active = elapsed.filter((d) => !g.createdAt || d >= g.createdAt);
+        possible += active.length;
+        done += active.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
       }
       return { user, stamps, done, possible, rate: possible > 0 ? done / possible : null };
     };
@@ -264,13 +260,8 @@ export default function App() {
   const reminder = useMemo(() => {
     if (new Date(clock).getHours() < 21) return null;
     const today = todayStr(0);
-    const thisWeek = weekDates(0);
     const missed = myGoals.filter((g) => {
       if (g.type === "milestone" || checkinSet.has(`${g.id}_${today}`)) return false;
-      if (g.type === "weekly") {
-        const weekChecks = thisWeek.filter((d) => checkinSet.has(`${g.id}_${d}`)).length;
-        return weekChecks < g.targetPerWeek;
-      }
       return true;
     });
     if (missed.length === 0) return null;
@@ -357,6 +348,10 @@ export default function App() {
   const addProgress = (goalId, amount) => {
     if (!amount) return;
     mutate({ action: "addProgress", goalId, amount });
+  };
+
+  const saveFailureReason = (goalId, text) => {
+    mutate({ action: "addFailureReason", goalId, text });
   };
 
   const sendMessage = (text) => {
@@ -476,6 +471,7 @@ export default function App() {
         reactions={state.reactions}
         me={me}
         onAddProgress={addProgress}
+        onSaveFailureReason={saveFailureReason}
         onToggleReaction={toggleReaction}
         onDelete={deleteGoal}
       />
