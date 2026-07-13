@@ -1467,6 +1467,203 @@ input:focus-visible {
   cursor: default;
 }
 
+/* ---------- Goal memo box ---------- */
+
+.memo-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.memo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background:
+    linear-gradient(90deg, rgba(46, 107, 94, 0.1), transparent 42%),
+    rgba(248, 242, 226, 0.86);
+  border: 1px solid rgba(185, 163, 110, 0.72);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow-soft);
+}
+
+.memo-head h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+}
+
+.memo-form {
+  background: rgba(248, 242, 226, 0.92);
+  border: 1px solid rgba(185, 163, 110, 0.72);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.memo-form input,
+.memo-form textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  padding: 9px 11px;
+}
+
+.memo-form textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.memo-type-row,
+.memo-form .field-row,
+.memo-icon-picker {
+  margin-top: 8px;
+}
+
+.memo-type-selector {
+  margin-bottom: 0;
+}
+
+.memo-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.memo-form-actions .btn-primary:disabled,
+.memo-actions .btn-primary:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.memo-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.memo-section {
+  min-width: 0;
+}
+
+.memo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.memo-card {
+  background:
+    linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(248, 242, 226, 0.98));
+  border: 1px solid rgba(185, 163, 110, 0.72);
+  border-radius: var(--radius);
+  padding: 13px;
+  box-shadow: var(--shadow-soft);
+}
+
+.memo-card.soon {
+  border-color: rgba(46, 107, 94, 0.45);
+  background:
+    linear-gradient(135deg, rgba(46, 107, 94, 0.08), transparent 46%),
+    linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(248, 242, 226, 0.98));
+}
+
+.memo-card-top,
+.memo-title,
+.memo-meta,
+.memo-extra,
+.memo-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memo-card-top {
+  justify-content: space-between;
+}
+
+.memo-title {
+  min-width: 0;
+}
+
+.memo-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14.5px;
+}
+
+.memo-body {
+  margin: 9px 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.memo-meta,
+.memo-extra {
+  flex-wrap: wrap;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+}
+
+.memo-meta b {
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.memo-extra {
+  margin-top: 5px;
+  font-family: var(--font-mono);
+}
+
+.memo-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.memo-actions button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.memo-actions .btn-primary {
+  background: var(--stamp-red);
+  border-color: var(--stamp-red);
+  color: #fdf6e8;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .memo-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .memo-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .memo-head .btn-primary {
+    width: 100%;
+  }
+}
+
 /* ---------- Message board ---------- */
 
 .message-board {

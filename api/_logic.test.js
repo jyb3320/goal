@@ -294,6 +294,94 @@ describe("기간 목표 실패 기록", () => {
   });
 });
 
+describe("목표 메모함", () => {
+  function memoBoard() {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    b.post({ action: "join", name: "쥐" });
+    return b;
+  }
+
+  it("목표 메모를 추가/수정/삭제할 수 있고 owner는 서버가 강제", () => {
+    const b = memoBoard();
+    const added = b.post({
+      action: "addGoalMemo",
+      name: "햄",
+      memo: { title: "면접 준비", body: "다음 달부터", goalType: "daily", owner: "쥐" },
+    });
+    expect(added.status).toBe(200);
+    expect(added.respond.goalMemos).toHaveLength(1);
+    expect(added.respond.goalMemos[0].owner).toBe("햄");
+
+    const memoId = added.respond.goalMemos[0].id;
+    const updated = b.post({
+      action: "updateGoalMemo",
+      name: "햄",
+      memoId,
+      memo: { title: "면접 스크랩", body: "자료 모으기", goalType: "daily" },
+    });
+    expect(updated.respond.goalMemos[0].title).toBe("면접 스크랩");
+
+    const deleted = b.post({ action: "deleteGoalMemo", name: "햄", memoId });
+    expect(deleted.respond.goalMemos).toHaveLength(0);
+  });
+
+  it("친구의 목표 메모는 수정/삭제/전환할 수 없다", () => {
+    const b = memoBoard();
+    const added = b.post({
+      action: "addGoalMemo",
+      name: "햄",
+      memo: { title: "자격증", goalType: "daily" },
+    });
+    const memoId = added.respond.goalMemos[0].id;
+    expect(
+      b.post({ action: "updateGoalMemo", name: "쥐", memoId, memo: { title: "훔침" } }).status
+    ).toBe(403);
+    expect(b.post({ action: "deleteGoalMemo", name: "쥐", memoId }).status).toBe(403);
+    expect(b.post({ action: "convertGoalMemo", name: "쥐", memoId }).status).toBe(403);
+  });
+
+  it("매일 목표 메모를 현황판 목표로 전환하고 메모함에서 숨김 상태로 둔다", () => {
+    const b = memoBoard();
+    const added = b.post({
+      action: "addGoalMemo",
+      name: "햄",
+      memo: { title: "아침 스트레칭", icon: "🧘", goalType: "daily", plannedDate: seoulToday() },
+    });
+    const memoId = added.respond.goalMemos[0].id;
+    const converted = b.post({ action: "convertGoalMemo", name: "햄", memoId });
+    const goal = converted.respond.goals[0];
+    const memo = converted.respond.goalMemos[0];
+    expect(goal.title).toBe("아침 스트레칭");
+    expect(goal.type).toBe("daily");
+    expect(memo.convertedAt).toBeTruthy();
+    expect(memo.convertedGoalId).toBe(goal.id);
+  });
+
+  it("기간 목표 메모는 목표량과 마감일이 있어야 전환된다", () => {
+    const b = memoBoard();
+    const invalid = b.post({
+      action: "addGoalMemo",
+      name: "햄",
+      memo: { title: "지원서 제출", goalType: "milestone", target: 3 },
+    });
+    const invalidId = invalid.respond.goalMemos[0].id;
+    expect(b.post({ action: "convertGoalMemo", name: "햄", memoId: invalidId }).status).toBe(400);
+
+    const valid = b.post({
+      action: "addGoalMemo",
+      name: "햄",
+      memo: { title: "지원서 제출", goalType: "milestone", target: 5, unit: "개", deadline: shiftDate(seoulToday(), 30) },
+    });
+    const validId = valid.respond.goalMemos.find((m) => m.title === "지원서 제출" && m.deadline)?.id;
+    const converted = b.post({ action: "convertGoalMemo", name: "햄", memoId: validId });
+    const goal = converted.respond.goals[0];
+    expect(goal.type).toBe("milestone");
+    expect(goal.target).toBe(5);
+    expect(goal.deadline).toBe(shiftDate(seoulToday(), 30));
+  });
+});
+
 describe("리마인더 카운트", () => {
   it("매일 목표 미체크만 카운트하고 기존 weekly 데이터는 무시", () => {
     const today = seoulToday();

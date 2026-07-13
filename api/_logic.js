@@ -23,6 +23,7 @@ export function emptyState() {
     messages: [],
     pokes: [], // 콕 찌르기 (오늘/어제 것만 보관)
     excuses: [], // 못 찍은 날의 이유 — 기록 탭 반성 노트용
+    goalMemos: [], // 언젠가 현황판에 올릴 목표 아이디어
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
   };
@@ -87,7 +88,7 @@ export function seoulWeekDates(today = seoulToday()) {
 export function normalize(raw) {
   const { _v, ...rest } = raw || {};
   const s = { ...emptyState(), ...rest };
-  for (const key of ["users", "goals", "checkins", "progress", "reactions", "messages", "pokes", "excuses"]) {
+  for (const key of ["users", "goals", "checkins", "progress", "reactions", "messages", "pokes", "excuses", "goalMemos"]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
   for (const key of ["push", "archive"]) {
@@ -120,10 +121,49 @@ function findGoal(state, goalId) {
   return state.goals.find((g) => g.id === goalId) || null;
 }
 
+function findGoalMemo(state, memoId) {
+  return state.goalMemos.find((m) => m.id === memoId) || null;
+}
+
 function progressTotal(state, goalId) {
   return state.progress
     .filter((p) => p.goalId === goalId)
     .reduce((sum, p) => sum + p.amount, 0);
+}
+
+function cleanMemoInput(raw = {}) {
+  const goalType = GOAL_TYPES.includes(raw.goalType) ? raw.goalType : "daily";
+  const memo = {
+    title: str(raw.title, 60),
+    body: str(raw.body, 400),
+    icon: str(raw.icon, 4) || "📝",
+    goalType,
+    plannedDate: str(raw.plannedDate, 10),
+  };
+  if (goalType === "milestone") {
+    memo.deadline = str(raw.deadline, 10);
+    memo.target = Math.max(0, int(raw.target, 0));
+    memo.unit = str(raw.unit, 10) || "개";
+  }
+  return memo;
+}
+
+function goalFromMemo(memo, today) {
+  const goal = {
+    id: newId("g"),
+    owner: memo.owner,
+    title: memo.title,
+    icon: memo.icon || "🎯",
+    type: GOAL_TYPES.includes(memo.goalType) ? memo.goalType : "daily",
+    createdAt: today,
+  };
+  if (goal.type === "milestone") {
+    goal.target = Math.max(1, int(memo.target, 0));
+    goal.unit = str(memo.unit, 10) || "개";
+    goal.deadline = str(memo.deadline, 10);
+    goal.status = "active";
+  }
+  return goal;
 }
 
 // 상태가 무한히 크지 않게: 오래된 기록을 지우거나 집계로 합친다.
@@ -195,6 +235,57 @@ export function applyAction(state, body, user) {
         goal.status = "active";
       }
       state.goals.push(goal);
+      return {};
+    }
+
+    case "addGoalMemo": {
+      const input = cleanMemoInput(body.memo || {});
+      if (!input.title) return { error: "invalid memo", status: 400 };
+      state.goalMemos.push({
+        id: newId("memo"),
+        owner: user,
+        ...input,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return {};
+    }
+
+    case "updateGoalMemo": {
+      const memo = findGoalMemo(state, str(body.memoId, 50));
+      if (!memo || memo.convertedAt) return { noop: true };
+      if (memo.owner !== user) return { error: "본인 메모만 수정할 수 있어요", status: 403 };
+      const input = cleanMemoInput(body.memo || {});
+      if (!input.title) return { error: "invalid memo", status: 400 };
+      Object.assign(memo, input, { updatedAt: new Date().toISOString() });
+      if (memo.goalType !== "milestone") {
+        delete memo.deadline;
+        delete memo.target;
+        delete memo.unit;
+      }
+      return {};
+    }
+
+    case "deleteGoalMemo": {
+      const memo = findGoalMemo(state, str(body.memoId, 50));
+      if (!memo || memo.convertedAt) return { noop: true };
+      if (memo.owner !== user) return { error: "본인 메모만 삭제할 수 있어요", status: 403 };
+      state.goalMemos = state.goalMemos.filter((m) => m.id !== memo.id);
+      return {};
+    }
+
+    case "convertGoalMemo": {
+      const memo = findGoalMemo(state, str(body.memoId, 50));
+      if (!memo || memo.convertedAt) return { noop: true };
+      if (memo.owner !== user) return { error: "본인 메모만 현황판에 올릴 수 있어요", status: 403 };
+      if (!memo.title) return { error: "invalid memo", status: 400 };
+      if (memo.goalType === "milestone" && (!memo.deadline || int(memo.target, 0) < 1)) {
+        return { error: "기간 목표는 목표량과 마감일이 필요해요", status: 400 };
+      }
+      const goal = goalFromMemo(memo, today);
+      state.goals.push(goal);
+      memo.convertedAt = new Date().toISOString();
+      memo.convertedGoalId = goal.id;
       return {};
     }
 

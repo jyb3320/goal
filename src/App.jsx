@@ -10,11 +10,12 @@ import AddGoalForm from "./components/AddGoalForm.jsx";
 import MessageBoard from "./components/MessageBoard.jsx";
 import WeekSummary from "./components/WeekSummary.jsx";
 import HistoryView from "./components/HistoryView.jsx";
+import GoalMemoView from "./components/GoalMemoView.jsx";
 import MissedPanel from "./components/MissedPanel.jsx";
 import Toast from "./components/Toast.jsx";
 
 const API = "/api/state";
-const EMPTY_STATE = { users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [], pokes: [], excuses: [], archive: {} };
+const EMPTY_STATE = { users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [], pokes: [], excuses: [], goalMemos: [], archive: {} };
 
 function pickState(data) {
   return {
@@ -26,13 +27,14 @@ function pickState(data) {
     messages: data.messages || [],
     pokes: data.pokes || [],
     excuses: data.excuses || [],
+    goalMemos: data.goalMemos || [],
     archive: data.archive || {},
   };
 }
 
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
-  const [view, setView] = useState("board"); // 'board' | 'village' | 'history'
+  const [view, setView] = useState("board"); // 'board' | 'village' | 'history' | 'memos'
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
@@ -353,6 +355,24 @@ export default function App() {
     mutate({ action: "addMessage", text });
   };
 
+  const addGoalMemo = (memo) => {
+    mutate({ action: "addGoalMemo", memo });
+  };
+
+  const updateGoalMemo = (memoId, memo) => {
+    mutate({ action: "updateGoalMemo", memoId, memo });
+  };
+
+  const deleteGoalMemo = (memoId) => {
+    const ok = window.confirm("이 목표 메모를 삭제할까요?");
+    if (!ok) return;
+    mutate({ action: "deleteGoalMemo", memoId });
+  };
+
+  const convertGoalMemo = (memoId) => {
+    mutate({ action: "convertGoalMemo", memoId });
+  };
+
   const poke = async () => {
     vibrate(10);
     const ok = await mutate({ action: "poke" });
@@ -522,6 +542,9 @@ export default function App() {
         <button type="button" className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
           📅 기록
         </button>
+        <button type="button" className={view === "memos" ? "active" : ""} onClick={() => setView("memos")}>
+          📝 메모함
+        </button>
       </div>
 
       {view === "village" && <Village state={state} me={me} otherName={otherName} />}
@@ -534,6 +557,18 @@ export default function App() {
           excuses={state.excuses}
           me={me}
           otherName={otherName}
+        />
+      )}
+
+      {view === "memos" && (
+        <GoalMemoView
+          memos={state.goalMemos}
+          me={me}
+          otherName={otherName}
+          onAdd={addGoalMemo}
+          onUpdate={updateGoalMemo}
+          onDelete={deleteGoalMemo}
+          onConvert={convertGoalMemo}
         />
       )}
 
