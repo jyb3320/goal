@@ -6,6 +6,7 @@ import {
   seoulToday,
   shiftDate,
   countMissedToday,
+  countTodayGoals,
 } from "./_logic.js";
 
 // Redis 대신 인메모리로 handlePost를 돌리는 테스트용 보드
@@ -294,7 +295,7 @@ describe("기간 목표 실패 기록", () => {
   });
 });
 
-describe("목표 메모함", () => {
+describe("메모장", () => {
   function memoBoard() {
     const b = freshBoard();
     b.post({ action: "join", name: "햄" });
@@ -302,83 +303,56 @@ describe("목표 메모함", () => {
     return b;
   }
 
-  it("목표 메모를 추가/수정/삭제할 수 있고 owner는 서버가 강제", () => {
+  it("메모를 추가/수정/삭제할 수 있고 owner는 서버가 강제", () => {
     const b = memoBoard();
     const added = b.post({
       action: "addGoalMemo",
       name: "햄",
-      memo: { title: "면접 준비", body: "다음 달부터", goalType: "daily", owner: "쥐" },
+      memo: { text: "다음 달부터 면접 준비", owner: "쥐" },
     });
     expect(added.status).toBe(200);
     expect(added.respond.goalMemos).toHaveLength(1);
     expect(added.respond.goalMemos[0].owner).toBe("햄");
+    expect(added.respond.goalMemos[0].text).toBe("다음 달부터 면접 준비");
 
     const memoId = added.respond.goalMemos[0].id;
     const updated = b.post({
       action: "updateGoalMemo",
       name: "햄",
       memoId,
-      memo: { title: "면접 스크랩", body: "자료 모으기", goalType: "daily" },
+      memo: { text: "면접 자료 스크랩" },
     });
-    expect(updated.respond.goalMemos[0].title).toBe("면접 스크랩");
+    expect(updated.respond.goalMemos[0].text).toBe("면접 자료 스크랩");
 
     const deleted = b.post({ action: "deleteGoalMemo", name: "햄", memoId });
     expect(deleted.respond.goalMemos).toHaveLength(0);
   });
 
-  it("친구의 목표 메모는 수정/삭제/전환할 수 없다", () => {
+  it("빈 메모는 거부", () => {
     const b = memoBoard();
-    const added = b.post({
-      action: "addGoalMemo",
-      name: "햄",
-      memo: { title: "자격증", goalType: "daily" },
-    });
+    expect(b.post({ action: "addGoalMemo", name: "햄", memo: { text: "  " } }).status).toBe(400);
+  });
+
+  it("친구의 메모는 수정/삭제할 수 없다", () => {
+    const b = memoBoard();
+    const added = b.post({ action: "addGoalMemo", name: "햄", memo: { text: "자격증" } });
     const memoId = added.respond.goalMemos[0].id;
     expect(
-      b.post({ action: "updateGoalMemo", name: "쥐", memoId, memo: { title: "훔침" } }).status
+      b.post({ action: "updateGoalMemo", name: "쥐", memoId, memo: { text: "훔침" } }).status
     ).toBe(403);
     expect(b.post({ action: "deleteGoalMemo", name: "쥐", memoId }).status).toBe(403);
-    expect(b.post({ action: "convertGoalMemo", name: "쥐", memoId }).status).toBe(403);
   });
 
-  it("매일 목표 메모를 현황판 목표로 전환하고 메모함에서 숨김 상태로 둔다", () => {
-    const b = memoBoard();
-    const added = b.post({
-      action: "addGoalMemo",
-      name: "햄",
-      memo: { title: "아침 스트레칭", icon: "🧘", goalType: "daily", plannedDate: seoulToday() },
+  it("옛 형식 메모(제목/본문)는 텍스트로 마이그레이션, 승격된 메모는 버림", () => {
+    const state = normalize({
+      users: ["햄"],
+      goalMemos: [
+        { id: "m1", owner: "햄", title: "면접 준비", body: "다음 달부터", goalType: "daily" },
+        { id: "m2", owner: "햄", title: "끝난 메모", convertedAt: "2026-07-01T00:00:00Z" },
+      ],
     });
-    const memoId = added.respond.goalMemos[0].id;
-    const converted = b.post({ action: "convertGoalMemo", name: "햄", memoId });
-    const goal = converted.respond.goals[0];
-    const memo = converted.respond.goalMemos[0];
-    expect(goal.title).toBe("아침 스트레칭");
-    expect(goal.type).toBe("daily");
-    expect(memo.convertedAt).toBeTruthy();
-    expect(memo.convertedGoalId).toBe(goal.id);
-  });
-
-  it("기간 목표 메모는 목표량과 마감일이 있어야 전환된다", () => {
-    const b = memoBoard();
-    const invalid = b.post({
-      action: "addGoalMemo",
-      name: "햄",
-      memo: { title: "지원서 제출", goalType: "milestone", target: 3 },
-    });
-    const invalidId = invalid.respond.goalMemos[0].id;
-    expect(b.post({ action: "convertGoalMemo", name: "햄", memoId: invalidId }).status).toBe(400);
-
-    const valid = b.post({
-      action: "addGoalMemo",
-      name: "햄",
-      memo: { title: "지원서 제출", goalType: "milestone", target: 5, unit: "개", deadline: shiftDate(seoulToday(), 30) },
-    });
-    const validId = valid.respond.goalMemos.find((m) => m.title === "지원서 제출" && m.deadline)?.id;
-    const converted = b.post({ action: "convertGoalMemo", name: "햄", memoId: validId });
-    const goal = converted.respond.goals[0];
-    expect(goal.type).toBe("milestone");
-    expect(goal.target).toBe(5);
-    expect(goal.deadline).toBe(shiftDate(seoulToday(), 30));
+    expect(state.goalMemos).toHaveLength(1);
+    expect(state.goalMemos[0].text).toBe("면접 준비 — 다음 달부터");
   });
 });
 
@@ -394,6 +368,20 @@ describe("리마인더 카운트", () => {
       ],
     });
     expect(countMissedToday(state, "햄", today)).toBe(1);
+  });
+
+  it("아침 응원 카운트는 매일 목표 수만 센다", () => {
+    const state = normalize({
+      users: ["햄", "쥐"],
+      goals: [
+        { id: "d1", owner: "햄", title: "a", type: "daily" },
+        { id: "d2", owner: "햄", title: "b", type: "daily" },
+        { id: "m1", owner: "햄", title: "c", type: "milestone", target: 5 },
+        { id: "d3", owner: "쥐", title: "d", type: "daily" },
+      ],
+    });
+    expect(countTodayGoals(state, "햄")).toBe(2);
+    expect(countTodayGoals(state, "쥐")).toBe(1);
   });
 
   it("weekly 타입으로 새 목표를 보내도 daily로 생성", () => {

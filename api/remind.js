@@ -7,11 +7,13 @@ import {
   versionOf,
   seoulToday,
   countMissedToday,
+  countTodayGoals,
 } from "./_logic.js";
 import { getVapidKeys } from "./_vapid.js";
 
-// 매일 밤 9시(KST)에 Vercel Cron이 호출한다 (vercel.json 참고).
-// 오늘 몫을 안 채운 사용자에게 웹 푸시를 보낸다.
+// Vercel Cron이 하루 두 번 호출한다 (vercel.json 참고):
+// - ?slot=morning (아침 8시 KST): 오늘 목표 응원 푸시
+// - ?slot=night (밤 9시 KST): 아직 안 찍은 도장 리마인더
 
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
 const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
@@ -36,24 +38,39 @@ export default async function handler(req, res) {
     vapid.privateKey
   );
 
+  const slot = req.query?.slot === "morning" ? "morning" : "night";
   const raw = await kv.get(KEY);
   const state = normalize(raw);
   const today = seoulToday();
+
+  // 슬롯별 메시지 — 보낼 게 없으면 null
+  const messageFor = (name) => {
+    if (slot === "morning") {
+      const total = countTodayGoals(state, name);
+      if (total === 0) return null;
+      return {
+        title: "도장판 ☀️",
+        body: `좋은 아침! 오늘 찍을 도장 ${total}개 — 오늘 목표 꼭 달성하자 💪`,
+        tag: "stamp-morning",
+      };
+    }
+    const missed = countMissedToday(state, name, today);
+    if (missed === 0) return null;
+    return {
+      title: "도장판 ⏰",
+      body: `밤 9시가 넘었어요 — 아직 안 찍은 도장이 ${missed}개 있어요!`,
+      tag: "stamp-reminder",
+    };
+  };
 
   let sent = 0;
   const dead = []; // 만료된 구독은 정리
   for (const [name, sub] of Object.entries(state.push)) {
     if (!state.users.includes(name)) continue;
-    const missed = countMissedToday(state, name, today);
-    if (missed === 0) continue;
+    const message = messageFor(name);
+    if (!message) continue;
     try {
-      await webpush.sendNotification(
-        sub,
-        JSON.stringify({
-          title: "도장판 ⏰",
-          body: `밤 9시가 넘었어요 — 아직 안 찍은 도장이 ${missed}개 있어요!`,
-        })
-      );
+      await webpush.sendNotification(sub, JSON.stringify(message));
       sent++;
     } catch (e) {
       if (e.statusCode === 404 || e.statusCode === 410) dead.push(name);
@@ -73,5 +90,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return res.status(200).json({ sent, removed: dead.length });
+  return res.status(200).json({ slot, sent, removed: dead.length });
 }

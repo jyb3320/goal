@@ -204,7 +204,7 @@ export default function App() {
   const visibleGoal = (g) => g.type !== "weekly" && g.status !== "failed";
   const myGoals = state.goals.filter((g) => g.owner === me && visibleGoal(g));
   const otherGoals = otherName ? state.goals.filter((g) => g.owner === otherName && visibleGoal(g)) : [];
-  const myGoalMemos = state.goalMemos.filter((m) => m.owner === me && !m.convertedAt);
+  const myGoalMemos = state.goalMemos.filter((m) => m.owner === me);
 
   const progressSum = useMemo(() => {
     const map = {};
@@ -365,13 +365,9 @@ export default function App() {
   };
 
   const deleteGoalMemo = (memoId) => {
-    const ok = window.confirm("이 목표 메모를 삭제할까요?");
+    const ok = window.confirm("이 메모를 삭제할까요?");
     if (!ok) return;
     mutate({ action: "deleteGoalMemo", memoId });
-  };
-
-  const convertGoalMemo = (memoId) => {
-    mutate({ action: "convertGoalMemo", memoId });
   };
 
   const poke = async () => {
@@ -648,7 +644,6 @@ export default function App() {
                   onAdd={addGoalMemo}
                   onUpdate={updateGoalMemo}
                   onDelete={deleteGoalMemo}
-                  onConvert={convertGoalMemo}
                 />
               </div>
             </section>

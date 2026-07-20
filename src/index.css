@@ -1467,72 +1467,14 @@ input:focus-visible {
   cursor: default;
 }
 
-/* ---------- Goal memo box ---------- */
+/* ---------- 메모장 (자유 메모) ---------- */
 
-.add-action-row,
-.memo-add-row {
+.add-action-row {
   display: flex;
   gap: 8px;
 }
 
-.memo-form {
-  background: rgba(248, 242, 226, 0.92);
-  border: 1px solid rgba(185, 163, 110, 0.72);
-  border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: var(--shadow-soft);
-}
-
-.memo-panel .memo-form {
-  margin-top: 10px;
-}
-
-.memo-form input,
-.memo-form textarea {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 13.5px;
-  padding: 9px 11px;
-}
-
-.memo-form textarea {
-  min-height: 92px;
-  resize: vertical;
-  line-height: 1.5;
-  margin-top: 8px;
-}
-
-.memo-form .field-row,
-.memo-icon-picker {
-  margin-top: 8px;
-}
-
-.memo-type-selector {
-  margin-bottom: 0;
-}
-
-.memo-form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.memo-form-actions .btn-primary:disabled,
-.memo-actions .btn-primary:disabled {
-  opacity: 0.45;
-  cursor: default;
-}
-
-.memo-section {
-  min-width: 0;
-}
-
-.memo-section.inline {
+.memo-panel {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px dotted var(--line);
@@ -1552,103 +1494,92 @@ input:focus-visible {
   font-size: 15px;
 }
 
+.memo-input-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.memo-input-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  padding: 9px 11px;
+}
+
+.memo-input-row .btn-primary {
+  padding: 9px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.memo-input-row .btn-ghost {
+  padding: 9px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .memo-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
-.memo-card {
-  background:
-    linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(248, 242, 226, 0.98));
-  border: 1px solid rgba(185, 163, 110, 0.72);
-  border-radius: var(--radius);
-  padding: 13px;
-  box-shadow: var(--shadow-soft);
-}
-
-.memo-card.soon {
-  border-color: rgba(46, 107, 94, 0.45);
-  background:
-    linear-gradient(135deg, rgba(46, 107, 94, 0.08), transparent 46%),
-    linear-gradient(180deg, rgba(255, 250, 240, 0.94), rgba(248, 242, 226, 0.98));
-}
-
-.memo-card-top,
-.memo-title,
-.memo-meta,
-.memo-extra,
-.memo-actions {
+.memo-item {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
+  background: rgba(255, 250, 240, 0.9);
+  border: 1px solid rgba(185, 163, 110, 0.6);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  font-size: 13.5px;
 }
 
-.memo-card-top {
-  justify-content: space-between;
-}
-
-.memo-title {
-  min-width: 0;
-}
-
-.memo-title strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14.5px;
-}
-
-.memo-body {
-  margin: 9px 0;
-  color: var(--ink);
-  font-size: 13px;
+.memo-text {
+  flex: 1;
   line-height: 1.5;
   word-break: break-word;
 }
 
-.memo-meta,
-.memo-extra {
-  flex-wrap: wrap;
+.memo-time {
+  color: var(--ink-soft);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.memo-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.memo-item-actions button {
+  background: none;
+  border: none;
   color: var(--ink-soft);
   font-size: 11.5px;
+  text-decoration: underline;
+  padding: 0;
+  opacity: 0.7;
 }
 
-.memo-meta b {
-  color: var(--teal);
-  font-weight: 700;
-}
-
-.memo-extra {
-  margin-top: 5px;
-  font-family: var(--font-mono);
-}
-
-.memo-actions {
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.memo-actions button {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: #fff;
-  color: var(--ink-soft);
-  font-size: 12px;
-  padding: 6px 10px;
-}
-
-.memo-actions .btn-primary {
-  background: var(--stamp-red);
-  border-color: var(--stamp-red);
-  color: #fdf6e8;
-  font-weight: 700;
+.memo-item-actions button:hover {
+  opacity: 1;
+  color: var(--stamp-red);
 }
 
 @media (max-width: 720px) {
-  .add-action-row,
-  .memo-add-row {
+  .add-action-row {
     flex-direction: column;
   }
 }

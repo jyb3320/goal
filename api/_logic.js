@@ -98,6 +98,21 @@ export function normalize(raw) {
     s.users = [...new Set(s.goals.map((g) => g.owner))].slice(0, MAX_USERS);
   }
   s.goals = s.goals.map((g) => ({ type: "daily", ...g }));
+  // 옛 목표 메모(제목/본문/승격 구조) → 자유 텍스트 메모로 마이그레이션.
+  // 이미 목표로 승격된 메모는 이력일 뿐이라 버린다.
+  s.goalMemos = s.goalMemos
+    .filter((m) => !m.convertedAt)
+    .map((m) =>
+      m.text !== undefined
+        ? m
+        : {
+            id: m.id,
+            owner: m.owner,
+            text: [m.title, m.body].filter(Boolean).join(" — "),
+            createdAt: m.createdAt,
+            updatedAt: m.updatedAt,
+          }
+    );
   return s;
 }
 
@@ -131,39 +146,9 @@ function progressTotal(state, goalId) {
     .reduce((sum, p) => sum + p.amount, 0);
 }
 
+// 메모는 그냥 적어두는 자유 텍스트 — 목표 승격 같은 구조 없음
 function cleanMemoInput(raw = {}) {
-  const goalType = GOAL_TYPES.includes(raw.goalType) ? raw.goalType : "daily";
-  const memo = {
-    title: str(raw.title, 60),
-    body: str(raw.body, 400),
-    icon: str(raw.icon, 4) || "📝",
-    goalType,
-    plannedDate: str(raw.plannedDate, 10),
-  };
-  if (goalType === "milestone") {
-    memo.deadline = str(raw.deadline, 10);
-    memo.target = Math.max(0, int(raw.target, 0));
-    memo.unit = str(raw.unit, 10) || "개";
-  }
-  return memo;
-}
-
-function goalFromMemo(memo, today) {
-  const goal = {
-    id: newId("g"),
-    owner: memo.owner,
-    title: memo.title,
-    icon: memo.icon || "🎯",
-    type: GOAL_TYPES.includes(memo.goalType) ? memo.goalType : "daily",
-    createdAt: today,
-  };
-  if (goal.type === "milestone") {
-    goal.target = Math.max(1, int(memo.target, 0));
-    goal.unit = str(memo.unit, 10) || "개";
-    goal.deadline = str(memo.deadline, 10);
-    goal.status = "active";
-  }
-  return goal;
+  return { text: str(raw.text, 400) };
 }
 
 // 상태가 무한히 크지 않게: 오래된 기록을 지우거나 집계로 합친다.
@@ -240,7 +225,7 @@ export function applyAction(state, body, user) {
 
     case "addGoalMemo": {
       const input = cleanMemoInput(body.memo || {});
-      if (!input.title) return { error: "invalid memo", status: 400 };
+      if (!input.text) return { error: "invalid memo", status: 400 };
       state.goalMemos.push({
         id: newId("memo"),
         owner: user,
@@ -253,39 +238,19 @@ export function applyAction(state, body, user) {
 
     case "updateGoalMemo": {
       const memo = findGoalMemo(state, str(body.memoId, 50));
-      if (!memo || memo.convertedAt) return { noop: true };
+      if (!memo) return { noop: true };
       if (memo.owner !== user) return { error: "본인 메모만 수정할 수 있어요", status: 403 };
       const input = cleanMemoInput(body.memo || {});
-      if (!input.title) return { error: "invalid memo", status: 400 };
+      if (!input.text) return { error: "invalid memo", status: 400 };
       Object.assign(memo, input, { updatedAt: new Date().toISOString() });
-      if (memo.goalType !== "milestone") {
-        delete memo.deadline;
-        delete memo.target;
-        delete memo.unit;
-      }
       return {};
     }
 
     case "deleteGoalMemo": {
       const memo = findGoalMemo(state, str(body.memoId, 50));
-      if (!memo || memo.convertedAt) return { noop: true };
+      if (!memo) return { noop: true };
       if (memo.owner !== user) return { error: "본인 메모만 삭제할 수 있어요", status: 403 };
       state.goalMemos = state.goalMemos.filter((m) => m.id !== memo.id);
-      return {};
-    }
-
-    case "convertGoalMemo": {
-      const memo = findGoalMemo(state, str(body.memoId, 50));
-      if (!memo || memo.convertedAt) return { noop: true };
-      if (memo.owner !== user) return { error: "본인 메모만 현황판에 올릴 수 있어요", status: 403 };
-      if (!memo.title) return { error: "invalid memo", status: 400 };
-      if (memo.goalType === "milestone" && (!memo.deadline || int(memo.target, 0) < 1)) {
-        return { error: "기간 목표는 목표량과 마감일이 필요해요", status: 400 };
-      }
-      const goal = goalFromMemo(memo, today);
-      state.goals.push(goal);
-      memo.convertedAt = new Date().toISOString();
-      memo.convertedGoalId = goal.id;
       return {};
     }
 
@@ -491,6 +456,11 @@ export function handlePost(rawState, body) {
 
   compact(state);
   return { status: 200, respond: sanitize(state), state, write: true };
+}
+
+// 아침 응원: 오늘 찍어야 할 매일 목표 수
+export function countTodayGoals(state, user) {
+  return state.goals.filter((g) => g.owner === user && g.type === "daily").length;
 }
 
 // 밤 9시 리마인더: 아직 오늘 몫을 안 채운 매일 목표 수
