@@ -299,6 +299,67 @@ export function applyAction(state, body, user) {
       return {};
     }
 
+    case "applyAiGoalDraft": {
+      const draft = body.draft || {};
+      const selectedSeason = draft.season?.selected !== false ? draft.season : null;
+      let seasonId = str(draft.seasonId, 50);
+
+      if (selectedSeason) {
+        const title = str(selectedSeason.title, 100);
+        const outcomes = Array.isArray(selectedSeason.outcomes)
+          ? selectedSeason.outcomes.map((item) => str(item, 300)).filter(Boolean).slice(0, 2).join("\n")
+          : str(selectedSeason.outcomes, 700);
+        if (!title || !outcomes) return { error: "AI 시즌 초안의 이름과 완료 기준을 확인해주세요", status: 400 };
+        const current = state.seasons.find((season) => season.owner === user && season.status === "active");
+        const record = {
+          id: current?.id || newId("season"),
+          owner: user,
+          title,
+          focusAreas: str(selectedSeason.focusAreas, 200),
+          outcomes,
+          why: str(selectedSeason.why, 500),
+          notDoing: str(selectedSeason.notDoing, 500),
+          startDate: current?.startDate || today,
+          endDate: current?.endDate || shiftDate(today, 83),
+          status: "active",
+          createdAt: current?.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        if (current) Object.assign(current, record);
+        else state.seasons.push(record);
+        seasonId = record.id;
+      } else if (seasonId && !state.seasons.some((season) => season.id === seasonId && season.owner === user)) {
+        return { error: "본인의 현재 시즌에만 연결할 수 있어요", status: 403 };
+      }
+
+      const selectedItems = [...(Array.isArray(draft.projects) ? draft.projects : []), ...(Array.isArray(draft.routines) ? draft.routines : [])]
+        .filter((item) => item?.selected !== false)
+        .slice(0, 6);
+      for (const raw of selectedItems) {
+        const title = str(raw.title, 120);
+        if (!title) continue;
+        const kind = raw.kind === "routine" ? "routine" : "project";
+        const domainKey = LIFE_DOMAIN_KEYS.includes(str(raw.domainKey, 30)) ? str(raw.domainKey, 30) : "";
+        const duplicate = state.lifeItems.some(
+          (item) => item.owner === user && item.status !== "completed" && item.title === title
+        );
+        if (duplicate) continue;
+        state.lifeItems.push({
+          id: newId("life"),
+          owner: user,
+          title,
+          kind,
+          domainKey,
+          seasonId,
+          doneDefinition: str(raw.doneDefinition, 400),
+          status: "active",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return {};
+    }
+
     case "addLifeItem": {
       const item = body.item || {};
       const title = str(item.title, 120);

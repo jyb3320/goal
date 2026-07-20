@@ -17,6 +17,7 @@ import BigGoalPanel from "./components/BigGoalPanel.jsx";
 import LifeCompass from "./components/LifeCompass.jsx";
 import SeasonBoard from "./components/SeasonBoard.jsx";
 import ReflectionHub from "./components/ReflectionHub.jsx";
+import AIAdvisor from "./components/AIAdvisor.jsx";
 
 const API = "/api/state";
 const EMPTY_STATE = {
@@ -422,6 +423,9 @@ export default function App() {
   const linkGoal = (goalId, domainKey, seasonId) =>
     mutate({ action: "updateGoalContext", goalId, domainKey, seasonId });
 
+  const applyAiGoalDraft = (draft) =>
+    mutate({ action: "applyAiGoalDraft", draft });
+
   const saveWeeklyReview = (review) =>
     mutate({ action: "setWeeklyReview", review });
 
@@ -619,6 +623,9 @@ export default function App() {
         <button type="button" className={view === "reflection" ? "active" : ""} onClick={() => setView("reflection")}>
           <span>省</span> 복기
         </button>
+        <button type="button" className={view === "advisor" ? "active" : ""} onClick={() => setView("advisor")}>
+          <span>參</span> AI 참모
+        </button>
         <button type="button" className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
           <span>記</span> 기록
         </button>
@@ -662,6 +669,16 @@ export default function App() {
           onAddDecision={addDecision}
           onUpdateDecision={updateDecision}
           onDeleteDecision={deleteDecision}
+        />
+      )}
+
+      {view === "advisor" && (
+        <AIAdvisor
+          state={state}
+          me={me}
+          otherName={otherName}
+          onApplyDraft={applyAiGoalDraft}
+          onToast={showToast}
         />
       )}
 

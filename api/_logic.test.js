@@ -60,6 +60,39 @@ describe("접속 (이름만, 비밀번호 없음)", () => {
   });
 });
 
+describe("AI 목표 초안 승인 등록", () => {
+  it("사용자가 선택한 시즌과 항목만 등록한다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const result = b.post({
+      action: "applyAiGoalDraft",
+      name: "햄",
+      draft: {
+        season: {
+          selected: true,
+          title: "선택권을 만드는 12주",
+          outcomes: ["비상금 300만 원 만들기"],
+          focusAreas: "돈",
+        },
+        projects: [
+          { selected: true, kind: "project", title: "월 지출 구조 파악", domainKey: "money", doneDefinition: "3개월 지출 정리" },
+          { selected: false, kind: "project", title: "등록하면 안 됨", domainKey: "work" },
+        ],
+        routines: [
+          { selected: true, kind: "routine", title: "일요일 지출 검토", domainKey: "money", doneDefinition: "매주 20분" },
+        ],
+      },
+    });
+    expect(result.status).toBe(200);
+    expect(result.respond.seasons).toHaveLength(1);
+    expect(result.respond.lifeItems.map((item) => item.title)).toEqual([
+      "월 지출 구조 파악",
+      "일요일 지출 검토",
+    ]);
+    expect(result.respond.lifeItems.every((item) => item.seasonId === result.respond.seasons[0].id)).toBe(true);
+  });
+});
+
 describe("소유권과 날짜 검증", () => {
   it("남의 목표에 도장 불가", () => {
     const { b, goal } = twoUsers();
