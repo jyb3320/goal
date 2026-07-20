@@ -16,7 +16,7 @@ export default function MissedPanel({ goals, onStamp, onSaveReason }) {
     <section className="missed-panel" aria-label="어제 못 찍은 도장">
       <div className="missed-head">
         <strong>어제 못 찍은 도장 {goals.length}개</strong>
-        <span>마저 찍거나, 왜 못 했는지 한 줄 남겨주세요. 기록 탭의 반성 노트에 쌓여요.</span>
+        <span>마저 찍거나, 왜 못 했는지 한 줄 남겨주세요. 기록 탭의 실행 복기에 쌓여요.</span>
       </div>
       <ul>
         {goals.map((g) => (

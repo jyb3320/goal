@@ -3,7 +3,7 @@ export default function WeekSummary({ summary }) {
   return (
     <div className="week-summary">
       <div className="week-summary-head">
-        <span className="ws-title">이번 주 요약</span>
+        <span className="ws-title">이번 주 실행 요약</span>
         {summary.verdict && <span className="ws-verdict">{summary.verdict}</span>}
       </div>
       <div className="ws-rows">

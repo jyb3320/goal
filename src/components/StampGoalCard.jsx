@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { last14, todayStr, dowOf, computeStreak } from "../lib/dates.js";
 import { burst, stampSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
+import { domainOf } from "../lib/life.js";
 
 export default function StampGoalCard({
   goal,
@@ -65,6 +66,7 @@ export default function StampGoalCard({
         <div className="goal-title">
           <span className="icon">{goal.icon}</span>
           {goal.title}
+          {goal.domainKey && <span className="life-domain-tag">{domainOf(goal.domainKey)?.label}</span>}
         </div>
         <div className={`streak-badge ${badge.startsWith("오늘부터") ? "zero" : ""}`}>{badge}</div>
       </div>

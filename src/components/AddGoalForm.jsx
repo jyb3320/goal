@@ -1,28 +1,40 @@
 import { useState } from "react";
 import { todayStr } from "../lib/dates.js";
 import { onEnter } from "../lib/ime.js";
+import { LIFE_DOMAINS } from "../lib/life.js";
 
 const ICONS = ["🏃", "💧", "📖", "🧘", "🛌", "💪", "🥗", "✍️", "🎯", "🌱"];
 const GOAL_TYPE_LABEL = { daily: "매일", milestone: "기간 목표" };
 
-export default function AddGoalForm({ onAdd, onCancel }) {
+export default function AddGoalForm({ onAdd, onCancel, activeSeason }) {
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState(ICONS[0]);
   const [type, setType] = useState("daily");
   const [target, setTarget] = useState("");
   const [unit, setUnit] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [domainKey, setDomainKey] = useState("");
+  const [linkSeason, setLinkSeason] = useState(!!activeSeason);
+  const [saving, setSaving] = useState(false);
 
-  const submit = () => {
-    if (!title.trim()) return;
+  const submit = async () => {
+    if (saving || !title.trim()) return;
     if (type === "milestone" && (!target || parseInt(target, 10) < 1)) return;
-    const goal = { title: title.trim(), icon, type };
+    const goal = {
+      title: title.trim(),
+      icon,
+      type,
+      domainKey,
+      seasonId: linkSeason && activeSeason ? activeSeason.id : "",
+    };
     if (type === "milestone") {
       goal.target = parseInt(target, 10);
       goal.unit = unit.trim() || "개";
       goal.deadline = deadline;
     }
-    onAdd(goal);
+    setSaving(true);
+    const ok = await onAdd(goal);
+    if (!ok) setSaving(false);
   };
 
   return (
@@ -68,6 +80,23 @@ export default function AddGoalForm({ onAdd, onCancel }) {
           </div>
         </>
       )}
+      <div className="goal-context-fields">
+        <label>
+          <span>연결할 인생 영역</span>
+          <select value={domainKey} onChange={(event) => setDomainKey(event.target.value)}>
+            <option value="">나중에 정하기</option>
+            {LIFE_DOMAINS.map((domain) => (
+              <option key={domain.key} value={domain.key}>{domain.label}</option>
+            ))}
+          </select>
+        </label>
+        {activeSeason && (
+          <label className="season-link-check">
+            <input type="checkbox" checked={linkSeason} onChange={(event) => setLinkSeason(event.target.checked)} />
+            <span>현재 12주 시즌 ‘{activeSeason.title}’에 연결</span>
+          </label>
+        )}
+      </div>
       <div className="icon-picker">
         {ICONS.map((ic) => (
           <button key={ic} type="button" className={icon === ic ? "selected" : ""} onClick={() => setIcon(ic)}>
@@ -76,8 +105,8 @@ export default function AddGoalForm({ onAdd, onCancel }) {
         ))}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn-primary" style={{ flex: 1 }} onClick={submit} type="button">
-          추가
+        <button className="btn-primary" style={{ flex: 1 }} onClick={submit} type="button" disabled={saving}>
+          {saving ? "저장 중…" : "추가"}
         </button>
         <button className="btn-ghost" type="button" onClick={onCancel}>
           취소

@@ -13,9 +13,18 @@ import HistoryView from "./components/HistoryView.jsx";
 import GoalMemoPanel from "./components/GoalMemoPanel.jsx";
 import MissedPanel from "./components/MissedPanel.jsx";
 import Toast from "./components/Toast.jsx";
+import BigGoalPanel from "./components/BigGoalPanel.jsx";
+import LifeCompass from "./components/LifeCompass.jsx";
+import SeasonBoard from "./components/SeasonBoard.jsx";
+import ReflectionHub from "./components/ReflectionHub.jsx";
 
 const API = "/api/state";
-const EMPTY_STATE = { users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [], pokes: [], excuses: [], goalMemos: [], archive: {} };
+const EMPTY_STATE = {
+  users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [],
+  pokes: [], excuses: [], goalMemos: [], bigGoals: [], lifeProfiles: [],
+  lifeDomains: [], seasons: [], lifeItems: [], weeklyReviews: [],
+  monthlyReviews: [], decisions: [], archive: {},
+};
 
 function pickState(data) {
   return {
@@ -28,13 +37,21 @@ function pickState(data) {
     pokes: data.pokes || [],
     excuses: data.excuses || [],
     goalMemos: data.goalMemos || [],
+    bigGoals: data.bigGoals || [],
+    lifeProfiles: data.lifeProfiles || [],
+    lifeDomains: data.lifeDomains || [],
+    seasons: data.seasons || [],
+    lifeItems: data.lifeItems || [],
+    weeklyReviews: data.weeklyReviews || [],
+    monthlyReviews: data.monthlyReviews || [],
+    decisions: data.decisions || [],
     archive: data.archive || {},
   };
 }
 
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
-  const [view, setView] = useState("board"); // 'board' | 'village' | 'history'
+  const [view, setView] = useState("board");
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
@@ -49,6 +66,7 @@ export default function App() {
   const pollRef = useRef(null);
   const toastTimerRef = useRef(null);
   const busyRef = useRef(0); // 진행 중인 액션 수 — 폴링이 낙관적 갱신을 되돌리지 않게
+  const mutationQueueRef = useRef(Promise.resolve()); // 응답 역전으로 최신 상태가 덮이는 것을 방지
 
   const showToast = (text) => {
     setToast({ text, id: Date.now() });
@@ -77,40 +95,49 @@ export default function App() {
   };
 
   // 서버에 액션 하나만 보내고, 돌아온 최신 상태로 갱신 (전체 덮어쓰기 X)
-  const mutate = async (payload, optimistic) => {
+  const mutate = (payload, optimistic) => {
     if (optimistic) setState(optimistic);
     busyRef.current++;
-    let refresh = false;
-    let ok = false;
-    try {
-      const res = await fetch(API, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...payload, name: me }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setState(pickState(data));
-        ok = true;
-      } else if (data.error === "auth") {
-        showToast("접속 인증이 풀렸어요 — 다시 들어와줘.");
-        logout();
-      } else {
-        console.error("action rejected", data);
-        showToast(typeof data.error === "string" && /[가-힣]/.test(data.error)
-          ? data.error
-          : "저장에 실패했어요 — 다시 시도해줘.");
-        refresh = true;
+
+    const run = async () => {
+      let refresh = false;
+      let ok = false;
+      try {
+        const res = await fetch(API, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...payload, name: me }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setState(pickState(data));
+          ok = true;
+        } else if (data.error === "auth") {
+          showToast("접속 인증이 풀렸어요 — 다시 들어와줘.");
+          logout();
+        } else {
+          console.error("action rejected", data);
+          showToast(typeof data.error === "string" && /[가-힣]/.test(data.error)
+            ? data.error
+            : "저장에 실패했어요 — 다시 시도해줘.");
+          refresh = true;
+        }
+      } catch (e) {
+        console.error("save failed", e);
+        showToast("저장에 실패했어요 — 연결 확인하고 다시 시도해줘.");
+        refresh = true; // 낙관적 갱신을 서버 상태로 되돌림
+      } finally {
+        busyRef.current--;
       }
-    } catch (e) {
-      console.error("save failed", e);
-      showToast("저장에 실패했어요 — 연결 확인하고 다시 시도해줘.");
-      refresh = true; // 낙관적 갱신을 서버 상태로 되돌림
-    } finally {
-      busyRef.current--;
-    }
-    if (refresh) load();
-    return ok;
+      if (refresh) load();
+      return ok;
+    };
+
+    // 한 기기에서 보낸 액션은 순서대로 저장한다. 앞선 응답이 늦게 도착해
+    // 더 최신 액션의 화면 상태를 되돌리는 문제를 원천적으로 막는다.
+    const task = mutationQueueRef.current.then(run, run);
+    mutationQueueRef.current = task.then(() => undefined, () => undefined);
+    return task;
   };
 
   const join = async (name) => {
@@ -205,6 +232,7 @@ export default function App() {
   const myGoals = state.goals.filter((g) => g.owner === me && visibleGoal(g));
   const otherGoals = otherName ? state.goals.filter((g) => g.owner === otherName && visibleGoal(g)) : [];
   const myGoalMemos = state.goalMemos.filter((m) => m.owner === me);
+  const myActiveSeason = state.seasons.find((season) => season.owner === me && season.status === "active") || null;
 
   const progressSum = useMemo(() => {
     const map = {};
@@ -245,12 +273,12 @@ export default function App() {
 
     const mine = statsFor(me);
     const theirs = otherName ? statsFor(otherName) : null;
-    let verdict = null;
-    if (theirs && mine.rate !== null && theirs.rate !== null) {
-      if (mine.rate > theirs.rate) verdict = `이번 주는 ${me}이(가) 앞서는 중 🔥`;
-      else if (mine.rate < theirs.rate) verdict = `이번 주는 ${otherName}이(가) 앞서는 중 🔥`;
-      else verdict = "막상막하! 🤜🤛";
-    }
+    const moved = mine.completed + (theirs?.completed || 0);
+    const verdict = theirs
+      ? moved > 0
+        ? `둘이 이번 주 ${moved}개 목표를 움직였어요`
+        : "이번 주의 첫 실행을 함께 시작해봐요"
+      : null;
     return { mine, theirs, verdict };
   }, [state.goals, progressSum, checkinSet, me, otherName]);
 
@@ -297,9 +325,10 @@ export default function App() {
     join(trimmed);
   };
 
-  const addGoal = (goal) => {
-    mutate({ action: "addGoal", goal });
-    setAdding(false);
+  const addGoal = async (goal) => {
+    const ok = await mutate({ action: "addGoal", goal });
+    if (ok) setAdding(false);
+    return ok;
   };
 
   const deleteGoal = (goal) => {
@@ -348,20 +377,67 @@ export default function App() {
     mutate({ action: "addProgress", goalId, amount });
   };
 
-  const saveFailureReason = (goalId, text) => {
+  const saveFailureReason = (goalId, text) =>
     mutate({ action: "addFailureReason", goalId, text });
-  };
 
-  const sendMessage = (text) => {
+  const sendMessage = (text) =>
     mutate({ action: "addMessage", text });
-  };
 
-  const addGoalMemo = (memo) => {
+  const addGoalMemo = (memo) =>
     mutate({ action: "addGoalMemo", memo });
+
+  const updateGoalMemo = (memoId, memo) =>
+    mutate({ action: "updateGoalMemo", memoId, memo });
+
+  const saveBigGoal = (text) =>
+    mutate({ action: "setBigGoal", text });
+
+  const saveLifeProfile = (profile) =>
+    mutate({ action: "setLifeProfile", profile });
+
+  const saveLifeDomain = (domain) =>
+    mutate({ action: "setLifeDomain", domain });
+
+  const saveSeason = (season) =>
+    mutate({ action: "setSeason", season });
+
+  const closeSeason = () => {
+    const ok = window.confirm("현재 12주 시즌을 마감할까요? 기록은 남고 새 시즌을 시작할 수 있어요.");
+    if (!ok) return Promise.resolve(false);
+    return mutate({ action: "closeSeason" });
   };
 
-  const updateGoalMemo = (memoId, memo) => {
-    mutate({ action: "updateGoalMemo", memoId, memo });
+  const addLifeItem = (item) =>
+    mutate({ action: "addLifeItem", item });
+
+  const updateLifeItem = (itemId, status) =>
+    mutate({ action: "updateLifeItem", itemId, status });
+
+  const deleteLifeItem = (itemId) => {
+    const ok = window.confirm("이 시즌 항목을 삭제할까요?");
+    if (!ok) return Promise.resolve(false);
+    return mutate({ action: "deleteLifeItem", itemId });
+  };
+
+  const linkGoal = (goalId, domainKey, seasonId) =>
+    mutate({ action: "updateGoalContext", goalId, domainKey, seasonId });
+
+  const saveWeeklyReview = (review) =>
+    mutate({ action: "setWeeklyReview", review });
+
+  const saveMonthlyReview = (review) =>
+    mutate({ action: "setMonthlyReview", review });
+
+  const addDecision = (decision) =>
+    mutate({ action: "addDecision", decision });
+
+  const updateDecision = (decisionId, result) =>
+    mutate({ action: "updateDecision", decisionId, result });
+
+  const deleteDecision = (decisionId) => {
+    const ok = window.confirm("이 결정 기록을 삭제할까요?");
+    if (!ok) return Promise.resolve(false);
+    return mutate({ action: "deleteDecision", decisionId });
   };
 
   const deleteGoalMemo = (memoId) => {
@@ -421,14 +497,14 @@ export default function App() {
             <div className="gate-brand">
               <span className="stamp-mark">印</span>
               <div>
-                <p className="gate-kicker">둘이 쓰는 습관 도장판</p>
+                <p className="gate-kicker">둘이 쓰는 인생 운영실</p>
                 <h1>도장판</h1>
               </div>
             </div>
             <div className="gate-preview">
               <div className="preview-head">
-                <span>오늘 기록</span>
-                <strong>4 / 5</strong>
+                <span>현재 인생 시즌</span>
+                <strong>12週</strong>
               </div>
               <div className="preview-stamps" aria-hidden="true">
                 {["월", "화", "수", "목", "금", "토", "일"].map((d, i) => (
@@ -438,21 +514,21 @@ export default function App() {
                 ))}
               </div>
               <div className="preview-row">
-                <span>친구 응원</span>
-                <b>👏 🔥 +2</b>
+                <span>이번 방향</span>
+                <b>체력과 커리어 기반</b>
               </div>
               <div className="preview-row">
-                <span>마을 성장</span>
-                <b>Lv.3 · 새싹 18</b>
+                <span>주간 인생 회의</span>
+                <b>현실 확인 · 다음 약속</b>
               </div>
             </div>
           </section>
           <form className="gate-card" onSubmit={submitName}>
             <h2>입장하기</h2>
             <p>
-              이름만 정하면 바로 시작해요.
+              삶의 방향부터 오늘의 실행까지 함께 기록해요.
               <br />
-              같은 링크를 친구에게 보내면 둘이 같은 도장판을 씁니다.
+              같은 링크를 친구에게 보내면 둘이 같은 운영실을 씁니다.
             </p>
             <input
               value={nameInput}
@@ -509,6 +585,7 @@ export default function App() {
         <h1>
           <span className="stamp-dot" />
           도장판
+          <small>둘의 인생 운영실</small>
         </h1>
         <div className="who">
           {me}로 접속 중
@@ -529,17 +606,64 @@ export default function App() {
         )}
       </div>
 
-      <div className="view-tabs">
+      <nav className="view-tabs" aria-label="주요 화면">
         <button type="button" className={view === "board" ? "active" : ""} onClick={() => setView("board")}>
-          📋 도장판
+          <span>今日</span> 오늘
         </button>
-        <button type="button" className={view === "village" ? "active" : ""} onClick={() => setView("village")}>
-          🏡 마을 <span className="tab-level">Lv.{myLevel}</span>
+        <button type="button" className={view === "compass" ? "active" : ""} onClick={() => setView("compass")}>
+          <span>北</span> 나침반
+        </button>
+        <button type="button" className={view === "season" ? "active" : ""} onClick={() => setView("season")}>
+          <span>旬</span> 12주
+        </button>
+        <button type="button" className={view === "reflection" ? "active" : ""} onClick={() => setView("reflection")}>
+          <span>省</span> 복기
         </button>
         <button type="button" className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
-          📅 기록
+          <span>記</span> 기록
         </button>
-      </div>
+        <button type="button" className={view === "village" ? "active" : ""} onClick={() => setView("village")}>
+          <span>村</span> 마을 <span className="tab-level">Lv.{myLevel}</span>
+        </button>
+      </nav>
+
+      {view === "compass" && (
+        <LifeCompass
+          state={state}
+          me={me}
+          otherName={otherName}
+          onSaveProfile={saveLifeProfile}
+          onSaveDomain={saveLifeDomain}
+        />
+      )}
+
+      {view === "season" && (
+        <SeasonBoard
+          state={state}
+          me={me}
+          otherName={otherName}
+          goals={myGoals}
+          onSaveSeason={saveSeason}
+          onCloseSeason={closeSeason}
+          onAddItem={addLifeItem}
+          onUpdateItem={updateLifeItem}
+          onDeleteItem={deleteLifeItem}
+          onLinkGoal={linkGoal}
+        />
+      )}
+
+      {view === "reflection" && (
+        <ReflectionHub
+          state={state}
+          me={me}
+          otherName={otherName}
+          onSaveWeekly={saveWeeklyReview}
+          onSaveMonthly={saveMonthlyReview}
+          onAddDecision={addDecision}
+          onUpdateDecision={updateDecision}
+          onDeleteDecision={deleteDecision}
+        />
+      )}
 
       {view === "village" && <Village state={state} me={me} otherName={otherName} />}
 
@@ -584,6 +708,15 @@ export default function App() {
               <span className="xp-line-meta">다음 레벨까지 {xpNeed - (myXP - xpBase)} XP · 마을 →</span>
             </button>
           </section>
+
+          {loaded && (
+            <BigGoalPanel
+              goals={state.bigGoals}
+              me={me}
+              otherName={otherName}
+              onSave={saveBigGoal}
+            />
+          )}
 
           {incomingPoke && incomingPoke.id !== dismissedPokeId && (
             <div className="reminder-banner poke-banner">
@@ -631,7 +764,11 @@ export default function App() {
                 )}
                 {myGoals.map((g) => renderGoalCard(g, true))}
                 {adding ? (
-                  <AddGoalForm onAdd={addGoal} onCancel={() => setAdding(false)} />
+                  <AddGoalForm
+                    onAdd={addGoal}
+                    onCancel={() => setAdding(false)}
+                    activeSeason={myActiveSeason}
+                  />
                 ) : (
                   <div className="add-action-row">
                     <button className="add-goal-trigger" onClick={() => setAdding(true)} type="button">

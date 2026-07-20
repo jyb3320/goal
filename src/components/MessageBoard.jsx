@@ -4,13 +4,16 @@ import { onEnter } from "../lib/ime.js";
 
 export default function MessageBoard({ messages, me, otherName, onSend, onDelete }) {
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
   const recent = [...messages].slice(-5).reverse();
 
-  const send = () => {
+  const send = async () => {
     const text = input.trim();
-    if (!text) return;
-    onSend(text);
-    setInput("");
+    if (!text || sending) return;
+    setSending(true);
+    const ok = await onSend(text);
+    if (ok) setInput("");
+    setSending(false);
   };
 
   return (
@@ -26,8 +29,8 @@ export default function MessageBoard({ messages, me, otherName, onSend, onDelete
           maxLength={120}
           onKeyDown={(e) => onEnter(e, send)}
         />
-        <button className="btn-primary" type="button" onClick={send}>
-          보내기
+        <button className="btn-primary" type="button" onClick={send} disabled={sending}>
+          {sending ? "전송 중…" : "보내기"}
         </button>
       </div>
       {recent.length > 0 && (

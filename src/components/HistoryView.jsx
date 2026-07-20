@@ -160,7 +160,7 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
       {monthExcuses.length > 0 && (
         <div className="reflect">
           <div className="reflect-head">
-            <span className="reflect-title">반성 노트</span>
+            <span className="reflect-title">실행 복기</span>
             <span className="reflect-count">못 찍은 날 {monthExcuses.length}번</span>
           </div>
           <ul className="reflect-list">

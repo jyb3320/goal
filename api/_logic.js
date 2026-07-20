@@ -4,6 +4,7 @@
 export const KEY = "goaltracker:state";
 export const MAX_USERS = 2;
 export const GOAL_TYPES = ["daily", "milestone"];
+export const LIFE_DOMAIN_KEYS = ["health", "work", "money", "relationships", "love", "growth", "mind", "experience", "contribution"];
 
 // 기록 보존 기간 — 지나면 컴팩션 대상
 const REACTION_KEEP_DAYS = 14; // UI가 최근 7일만 보여줌
@@ -24,6 +25,14 @@ export function emptyState() {
     pokes: [], // 콕 찌르기 (오늘/어제 것만 보관)
     excuses: [], // 못 찍은 날의 이유 — 기록 탭 반성 노트용
     goalMemos: [], // 언젠가 현황판에 올릴 목표 아이디어
+    bigGoals: [], // 사용자별 가장 큰 목표 하나
+    lifeProfiles: [], // 개인 헌법과 친구에게 필요한 지원
+    lifeDomains: [], // 건강·일·돈·관계 등 인생 영역별 현재 상태
+    seasons: [], // 사용자별 현재 12주 시즌
+    lifeItems: [], // 시즌에 연결된 프로젝트·루틴·해결할 문제
+    weeklyReviews: [], // 주간 인생 회의 기록
+    monthlyReviews: [], // 월간·분기 방향 복기
+    decisions: [], // 중요한 결정과 사후 결과
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
   };
@@ -88,7 +97,11 @@ export function seoulWeekDates(today = seoulToday()) {
 export function normalize(raw) {
   const { _v, ...rest } = raw || {};
   const s = { ...emptyState(), ...rest };
-  for (const key of ["users", "goals", "checkins", "progress", "reactions", "messages", "pokes", "excuses", "goalMemos"]) {
+  for (const key of [
+    "users", "goals", "checkins", "progress", "reactions", "messages", "pokes",
+    "excuses", "goalMemos", "bigGoals", "lifeProfiles", "lifeDomains", "seasons",
+    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions",
+  ]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
   for (const key of ["push", "archive"]) {
@@ -151,6 +164,12 @@ function cleanMemoInput(raw = {}) {
   return { text: str(raw.text, 400) };
 }
 
+function cleanTextFields(raw, specs) {
+  const out = {};
+  for (const [key, max] of Object.entries(specs)) out[key] = str(raw?.[key], max);
+  return out;
+}
+
 // 상태가 무한히 크지 않게: 오래된 기록을 지우거나 집계로 합친다.
 // XP는 아카이브 집계(archive[user].stamps)로 보존된다.
 export function compact(state, today = seoulToday()) {
@@ -193,6 +212,11 @@ export function compact(state, today = seoulToday()) {
 
   const excuseCutoff = shiftDate(today, -EXCUSE_KEEP_DAYS);
   state.excuses = state.excuses.filter((x) => x.date >= excuseCutoff).slice(-300);
+
+  state.weeklyReviews = state.weeklyReviews.slice(-104);
+  state.monthlyReviews = state.monthlyReviews.slice(-48);
+  state.decisions = state.decisions.slice(-120);
+  state.lifeItems = state.lifeItems.slice(-160);
 }
 
 // user는 인증된 사용자 — owner/by/from은 클라이언트 값을 믿지 않고 여기서 강제한다
@@ -201,10 +225,265 @@ export function applyAction(state, body, user) {
   const today = seoulToday();
 
   switch (action) {
+    case "setLifeProfile": {
+      const fields = cleanTextFields(body.profile, {
+        identity: 500,
+        values: 500,
+        principles: 700,
+        nonNegotiables: 500,
+        stopDoing: 500,
+        supportNeeded: 500,
+      });
+      if (!Object.values(fields).some(Boolean)) {
+        return { error: "개인 헌법 내용을 하나 이상 적어주세요", status: 400 };
+      }
+      const existing = state.lifeProfiles.find((p) => p.owner === user);
+      const record = { owner: user, ...fields, updatedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, record);
+      else state.lifeProfiles.push(record);
+      return {};
+    }
+
+    case "setLifeDomain": {
+      const key = str(body.domain?.key, 30);
+      if (!LIFE_DOMAIN_KEYS.includes(key)) return { error: "올바른 인생 영역을 선택해주세요", status: 400 };
+      const fields = cleanTextFields(body.domain, {
+        current: 500,
+        desired: 500,
+        nextStep: 300,
+      });
+      const score = Math.max(1, Math.min(5, int(body.domain?.score, 3)));
+      const existing = state.lifeDomains.find((d) => d.owner === user && d.key === key);
+      const record = { owner: user, key, score, ...fields, updatedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, record);
+      else state.lifeDomains.push(record);
+      return {};
+    }
+
+    case "setSeason": {
+      const fields = cleanTextFields(body.season, {
+        title: 100,
+        focusAreas: 200,
+        outcomes: 700,
+        why: 500,
+        notDoing: 500,
+      });
+      if (!fields.title || !fields.outcomes) {
+        return { error: "시즌 이름과 완료 기준을 적어주세요", status: 400 };
+      }
+      const startDate = str(body.season?.startDate, 10) || today;
+      const endDate = str(body.season?.endDate, 10) || shiftDate(startDate, 83);
+      if (endDate < startDate) return { error: "시즌 종료일을 확인해주세요", status: 400 };
+      const current = state.seasons.find((s) => s.owner === user && s.status === "active");
+      const record = {
+        id: current?.id || newId("season"),
+        owner: user,
+        ...fields,
+        startDate,
+        endDate,
+        status: "active",
+        createdAt: current?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      if (current) Object.assign(current, record);
+      else state.seasons.push(record);
+      return {};
+    }
+
+    case "closeSeason": {
+      const current = state.seasons.find((s) => s.owner === user && s.status === "active");
+      if (!current) return { noop: true };
+      current.status = "completed";
+      current.closedAt = new Date().toISOString();
+      current.updatedAt = current.closedAt;
+      return {};
+    }
+
+    case "addLifeItem": {
+      const item = body.item || {};
+      const title = str(item.title, 120);
+      const kind = ["project", "routine", "problem"].includes(item.kind) ? item.kind : "project";
+      if (!title) return { error: "항목 이름을 적어주세요", status: 400 };
+      const domainKey = str(item.domainKey, 30);
+      const seasonId = str(item.seasonId, 50);
+      if (domainKey && !LIFE_DOMAIN_KEYS.includes(domainKey)) {
+        return { error: "올바른 인생 영역을 선택해주세요", status: 400 };
+      }
+      if (seasonId && !state.seasons.some((season) => season.id === seasonId && season.owner === user)) {
+        return { error: "본인 시즌에만 연결할 수 있어요", status: 403 };
+      }
+      state.lifeItems.push({
+        id: newId("life"),
+        owner: user,
+        title,
+        kind,
+        domainKey,
+        seasonId,
+        doneDefinition: str(item.doneDefinition, 400),
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return {};
+    }
+
+    case "updateLifeItem": {
+      const item = state.lifeItems.find((x) => x.id === str(body.itemId, 50));
+      if (!item) return { noop: true };
+      if (item.owner !== user) return { error: "본인 항목만 수정할 수 있어요", status: 403 };
+      if (body.status !== undefined) {
+        const status = str(body.status, 20);
+        if (!["active", "completed", "paused"].includes(status)) {
+          return { error: "올바른 상태가 아니에요", status: 400 };
+        }
+        item.status = status;
+      }
+      if (body.item) {
+        const title = str(body.item.title, 120);
+        if (title) item.title = title;
+        item.domainKey = str(body.item.domainKey, 30);
+        item.seasonId = str(body.item.seasonId, 50);
+        item.doneDefinition = str(body.item.doneDefinition, 400);
+      }
+      item.updatedAt = new Date().toISOString();
+      return {};
+    }
+
+    case "deleteLifeItem": {
+      const id = str(body.itemId, 50);
+      const item = state.lifeItems.find((x) => x.id === id);
+      if (!item) return { noop: true };
+      if (item.owner !== user) return { error: "본인 항목만 삭제할 수 있어요", status: 403 };
+      state.lifeItems = state.lifeItems.filter((x) => x.id !== id);
+      return {};
+    }
+
+    case "updateGoalContext": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      if (!goal) return { noop: true };
+      if (goal.owner !== user) return { error: "본인 목표만 연결할 수 있어요", status: 403 };
+      const domainKey = str(body.domainKey, 30);
+      const seasonId = str(body.seasonId, 50);
+      if (domainKey && !LIFE_DOMAIN_KEYS.includes(domainKey)) {
+        return { error: "올바른 인생 영역을 선택해주세요", status: 400 };
+      }
+      if (seasonId && !state.seasons.some((season) => season.id === seasonId && season.owner === user)) {
+        return { error: "본인 시즌에만 연결할 수 있어요", status: 403 };
+      }
+      goal.domainKey = domainKey;
+      goal.seasonId = seasonId;
+      return {};
+    }
+
+    case "setWeeklyReview": {
+      const weekStart = str(body.review?.weekStart, 10);
+      if (!weekStart) return { error: "주간 기준일이 필요해요", status: 400 };
+      const fields = cleanTextFields(body.review, {
+        facts: 800,
+        wins: 600,
+        avoidance: 600,
+        timeMoney: 600,
+        worry: 500,
+        honestTalk: 500,
+        promises: 600,
+        priority: 300,
+      });
+      if (!Object.values(fields).some(Boolean)) return { error: "복기 내용을 적어주세요", status: 400 };
+      const existing = state.weeklyReviews.find((r) => r.owner === user && r.weekStart === weekStart);
+      const record = { id: existing?.id || newId("week"), owner: user, weekStart, ...fields, updatedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, record);
+      else state.weeklyReviews.push(record);
+      return {};
+    }
+
+    case "setMonthlyReview": {
+      const month = str(body.review?.month, 7);
+      if (!month) return { error: "복기할 달이 필요해요", status: 400 };
+      const fields = cleanTextFields(body.review, {
+        improvement: 800,
+        postponed: 600,
+        pattern: 600,
+        stillImportant: 500,
+        stop: 500,
+        nextFocus: 500,
+      });
+      if (!Object.values(fields).some(Boolean)) return { error: "복기 내용을 적어주세요", status: 400 };
+      const existing = state.monthlyReviews.find((r) => r.owner === user && r.month === month);
+      const record = { id: existing?.id || newId("month"), owner: user, month, ...fields, updatedAt: new Date().toISOString() };
+      if (existing) Object.assign(existing, record);
+      else state.monthlyReviews.push(record);
+      return {};
+    }
+
+    case "addDecision": {
+      const fields = cleanTextFields(body.decision, {
+        title: 120,
+        context: 700,
+        options: 700,
+        expectation: 500,
+        fear: 500,
+        reason: 700,
+        reviewDate: 10,
+      });
+      if (!fields.title || !fields.reason) return { error: "결정과 결정 이유를 적어주세요", status: 400 };
+      state.decisions.push({
+        id: newId("decision"),
+        owner: user,
+        ...fields,
+        result: "",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return {};
+    }
+
+    case "updateDecision": {
+      const decision = state.decisions.find((d) => d.id === str(body.decisionId, 50));
+      if (!decision) return { noop: true };
+      if (decision.owner !== user) return { error: "본인 결정만 수정할 수 있어요", status: 403 };
+      decision.result = str(body.result, 800);
+      decision.updatedAt = new Date().toISOString();
+      return {};
+    }
+
+    case "deleteDecision": {
+      const id = str(body.decisionId, 50);
+      const decision = state.decisions.find((d) => d.id === id);
+      if (!decision) return { noop: true };
+      if (decision.owner !== user) return { error: "본인 결정만 삭제할 수 있어요", status: 403 };
+      state.decisions = state.decisions.filter((d) => d.id !== id);
+      return {};
+    }
+
+    case "setBigGoal": {
+      const text = str(body.text, 160);
+      if (!text) return { error: "가장 큰 목표를 적어주세요", status: 400 };
+      const existing = state.bigGoals.find((g) => g.owner === user);
+      if (existing) {
+        existing.text = text;
+        existing.updatedAt = new Date().toISOString();
+      } else {
+        state.bigGoals.push({
+          owner: user,
+          text,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+      return {};
+    }
+
     case "addGoal": {
       const g = body.goal || {};
       const title = str(g.title, 60);
       if (!title) return { error: "invalid goal", status: 400 };
+      const domainKey = str(g.domainKey, 30);
+      const seasonId = str(g.seasonId, 50);
+      if (domainKey && !LIFE_DOMAIN_KEYS.includes(domainKey)) {
+        return { error: "올바른 인생 영역을 선택해주세요", status: 400 };
+      }
+      if (seasonId && !state.seasons.some((season) => season.id === seasonId && season.owner === user)) {
+        return { error: "본인 시즌에만 연결할 수 있어요", status: 403 };
+      }
       const goal = {
         id: newId("g"),
         owner: user,
@@ -212,6 +491,8 @@ export function applyAction(state, body, user) {
         icon: str(g.icon, 4) || "🎯",
         type: GOAL_TYPES.includes(g.type) ? g.type : "daily",
         createdAt: today,
+        domainKey,
+        seasonId,
       };
       if (goal.type === "milestone") {
         goal.target = Math.max(1, int(g.target, 1));

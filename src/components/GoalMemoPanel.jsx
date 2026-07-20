@@ -7,12 +7,15 @@ export default function GoalMemoPanel({ memos, onAdd, onUpdate, onDelete }) {
   const [input, setInput] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const add = () => {
+  const add = async () => {
     const text = input.trim();
-    if (!text) return;
-    onAdd({ text });
-    setInput("");
+    if (!text || saving) return;
+    setSaving(true);
+    const ok = await onAdd({ text });
+    if (ok) setInput("");
+    setSaving(false);
   };
 
   const startEdit = (memo) => {
@@ -20,11 +23,13 @@ export default function GoalMemoPanel({ memos, onAdd, onUpdate, onDelete }) {
     setEditText(memo.text);
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     const text = editText.trim();
-    if (!text) return;
-    onUpdate(editingId, { text });
-    setEditingId(null);
+    if (!text || saving) return;
+    setSaving(true);
+    const ok = await onUpdate(editingId, { text });
+    if (ok) setEditingId(null);
+    setSaving(false);
   };
 
   return (
@@ -41,8 +46,8 @@ export default function GoalMemoPanel({ memos, onAdd, onUpdate, onDelete }) {
           placeholder="적어두고 싶은 것 아무거나…"
           maxLength={400}
         />
-        <button type="button" className="btn-primary" onClick={add}>
-          저장
+        <button type="button" className="btn-primary" onClick={add} disabled={saving}>
+          {saving ? "저장 중…" : "저장"}
         </button>
       </div>
 
@@ -59,8 +64,8 @@ export default function GoalMemoPanel({ memos, onAdd, onUpdate, onDelete }) {
                     onKeyDown={(e) => onEnter(e, saveEdit)}
                     maxLength={400}
                   />
-                  <button type="button" className="btn-primary" onClick={saveEdit}>
-                    완료
+                  <button type="button" className="btn-primary" onClick={saveEdit} disabled={saving}>
+                    {saving ? "저장 중…" : "완료"}
                   </button>
                   <button type="button" className="btn-ghost" onClick={() => setEditingId(null)}>
                     취소

@@ -7,6 +7,7 @@ import {
   shiftDate,
   countMissedToday,
   countTodayGoals,
+  seoulWeekDates,
 } from "./_logic.js";
 
 // Redis 대신 인메모리로 handlePost를 돌리는 테스트용 보드
@@ -353,6 +354,159 @@ describe("메모장", () => {
     });
     expect(state.goalMemos).toHaveLength(1);
     expect(state.goalMemos[0].text).toBe("면접 준비 — 다음 달부터");
+  });
+});
+
+describe("가장 큰 목표", () => {
+  it("사용자마다 하나만 저장하고 다시 쓰면 수정한다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    b.post({ action: "join", name: "쥐" });
+
+    const first = b.post({
+      action: "setBigGoal",
+      name: "햄",
+      text: "건강하고 단단한 사람이 되기",
+      owner: "쥐",
+    });
+    expect(first.status).toBe(200);
+    expect(first.respond.bigGoals).toHaveLength(1);
+    expect(first.respond.bigGoals[0].owner).toBe("햄");
+
+    const updated = b.post({
+      action: "setBigGoal",
+      name: "햄",
+      text: "매일 성장하는 사람이 되기",
+    });
+    expect(updated.respond.bigGoals).toHaveLength(1);
+    expect(updated.respond.bigGoals[0].text).toBe("매일 성장하는 사람이 되기");
+
+    const friend = b.post({
+      action: "setBigGoal",
+      name: "쥐",
+      text: "좋은 관계를 오래 지키기",
+    });
+    expect(friend.respond.bigGoals).toHaveLength(2);
+  });
+
+  it("빈 목표는 저장하지 않는다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    expect(b.post({ action: "setBigGoal", name: "햄", text: "  " }).status).toBe(400);
+  });
+});
+
+describe("인생 운영 시스템", () => {
+  function lifeBoard() {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    b.post({ action: "join", name: "쥐" });
+    return b;
+  }
+
+  it("개인 헌법과 인생 영역은 사용자별로 저장된다", () => {
+    const b = lifeBoard();
+    const profile = b.post({
+      action: "setLifeProfile",
+      name: "햄",
+      profile: { identity: "단단하고 다정한 사람", values: "정직, 성장", owner: "쥐" },
+    });
+    expect(profile.status).toBe(200);
+    expect(profile.respond.lifeProfiles[0].owner).toBe("햄");
+
+    const domain = b.post({
+      action: "setLifeDomain",
+      name: "햄",
+      domain: { key: "health", score: 4, current: "주 2회 운동", desired: "지치지 않는 체력" },
+    });
+    expect(domain.respond.lifeDomains[0]).toMatchObject({ owner: "햄", key: "health", score: 4 });
+  });
+
+  it("현재 12주 시즌은 사용자마다 하나이며 프로젝트를 연결할 수 있다", () => {
+    const b = lifeBoard();
+    const seasonResult = b.post({
+      action: "setSeason",
+      name: "햄",
+      season: {
+        title: "체력과 커리어 기반",
+        outcomes: "5km 완주, 포트폴리오 완성",
+        startDate: seoulToday(),
+        endDate: shiftDate(seoulToday(), 83),
+      },
+    });
+    const season = seasonResult.respond.seasons[0];
+    expect(season.owner).toBe("햄");
+
+    const itemResult = b.post({
+      action: "addLifeItem",
+      name: "햄",
+      item: { title: "포트폴리오 완성", kind: "project", domainKey: "work", seasonId: season.id },
+    });
+    expect(itemResult.respond.lifeItems[0]).toMatchObject({
+      owner: "햄",
+      kind: "project",
+      seasonId: season.id,
+    });
+
+    const closed = b.post({ action: "closeSeason", name: "햄" });
+    expect(closed.respond.seasons[0].status).toBe("completed");
+    const next = b.post({
+      action: "setSeason",
+      name: "햄",
+      season: { title: "다음 시즌", outcomes: "새로운 결과" },
+    });
+    expect(next.respond.seasons).toHaveLength(2);
+  });
+
+  it("주간·월간 복기는 같은 기간에 다시 저장하면 갱신된다", () => {
+    const b = lifeBoard();
+    const weekStart = seoulWeekDates()[0];
+    b.post({ action: "setWeeklyReview", name: "햄", review: { weekStart, wins: "운동 2회" } });
+    const weekly = b.post({
+      action: "setWeeklyReview",
+      name: "햄",
+      review: { weekStart, wins: "운동 3회", priority: "수면 회복" },
+    });
+    expect(weekly.respond.weeklyReviews).toHaveLength(1);
+    expect(weekly.respond.weeklyReviews[0].wins).toBe("운동 3회");
+
+    const month = seoulToday().slice(0, 7);
+    b.post({ action: "setMonthlyReview", name: "햄", review: { month, improvement: "체력" } });
+    const monthly = b.post({
+      action: "setMonthlyReview",
+      name: "햄",
+      review: { month, improvement: "체력과 집중력" },
+    });
+    expect(monthly.respond.monthlyReviews).toHaveLength(1);
+  });
+
+  it("결정 기록의 결과는 작성자만 수정할 수 있다", () => {
+    const b = lifeBoard();
+    const added = b.post({
+      action: "addDecision",
+      name: "햄",
+      decision: { title: "이직 준비 시작", reason: "성장 환경이 필요해서" },
+    });
+    const id = added.respond.decisions[0].id;
+    expect(b.post({ action: "updateDecision", name: "쥐", decisionId: id, result: "침범" }).status).toBe(403);
+    const updated = b.post({
+      action: "updateDecision",
+      name: "햄",
+      decisionId: id,
+      result: "3개월 뒤 면접 두 곳 진행",
+    });
+    expect(updated.respond.decisions[0].result).toContain("면접");
+  });
+
+  it("친구의 시즌 항목과 목표 연결은 수정할 수 없다", () => {
+    const { b, goal } = twoUsers();
+    const item = b.post({
+      action: "addLifeItem",
+      name: "햄",
+      item: { title: "운동 프로젝트", kind: "project" },
+    }).respond.lifeItems[0];
+    expect(b.post({ action: "updateLifeItem", name: "쥐", itemId: item.id, status: "completed" }).status).toBe(403);
+    expect(b.post({ action: "updateGoalContext", name: "쥐", goalId: goal.id, domainKey: "health" }).status).toBe(403);
   });
 });
 

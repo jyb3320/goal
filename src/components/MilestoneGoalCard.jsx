@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ddayLabel, todayStr } from "../lib/dates.js";
 import { burst, bigBurst, stampSound, fanfareSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
+import { domainOf } from "../lib/life.js";
 
 export default function MilestoneGoalCard({
   goal,
@@ -17,6 +18,7 @@ export default function MilestoneGoalCard({
   const [amount, setAmountRaw] = useState(1);
   const [reasonOpen, setReasonOpen] = useState(false);
   const [failureReason, setFailureReason] = useState("");
+  const [savingReason, setSavingReason] = useState(false);
   const setAmount = (v) => setAmountRaw(Math.max(1, Math.min(999, v || 1)));
 
   const pct = Math.min(100, Math.round((current / goal.target) * 100));
@@ -44,13 +46,17 @@ export default function MilestoneGoalCard({
     }
   };
 
-  const saveFailureReason = (e) => {
+  const saveFailureReason = async (e) => {
     e.preventDefault();
     const text = failureReason.trim();
-    if (!text) return;
-    onSaveFailureReason(goal.id, text);
-    setFailureReason("");
-    setReasonOpen(false);
+    if (!text || savingReason) return;
+    setSavingReason(true);
+    const ok = await onSaveFailureReason(goal.id, text);
+    if (ok) {
+      setFailureReason("");
+      setReasonOpen(false);
+    }
+    setSavingReason(false);
   };
 
   return (
@@ -60,6 +66,7 @@ export default function MilestoneGoalCard({
           <span className="icon">{goal.icon}</span>
           {goal.title}
           <span className="type-tag">기간 목표</span>
+          {goal.domainKey && <span className="life-domain-tag">{domainOf(goal.domainKey)?.label}</span>}
         </div>
         <div className={`streak-badge ${done ? "done" : ""}`}>
           {done ? "달성! 🎉" : expired ? "실패 이유 필요" : dday || "기한 없음"}
@@ -125,8 +132,8 @@ export default function MilestoneGoalCard({
             <button type="button" onClick={() => setReasonOpen(false)}>
               취소
             </button>
-            <button type="submit" className="btn-primary" disabled={!failureReason.trim()}>
-              저장
+            <button type="submit" className="btn-primary" disabled={!failureReason.trim() || savingReason}>
+              {savingReason ? "저장 중…" : "저장"}
             </button>
           </div>
         </form>
