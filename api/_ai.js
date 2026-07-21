@@ -489,7 +489,9 @@ export async function requestAI(messages, env = process.env, fetchImpl = fetch) 
     throw error;
   }
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
+  // Keep a buffer below Vercel's 300-second function limit. Large hosted
+  // models can spend well over a minute waiting in the provider queue.
+  const timeout = setTimeout(() => controller.abort(), 270000);
   try {
     const isOllama = config.provider === "ollama";
     const url = `${config.baseUrl}${isOllama ? "/chat" : "/chat/completions"}`;
