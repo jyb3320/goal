@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildEvidenceBundle, validateGoalDraft, validateReport } from "./_ai.js";
+import { buildEvidenceBundle, requestAI, validateGoalDraft, validateReport } from "./_ai.js";
 import { normalize, seoulToday, shiftDate } from "./_logic.js";
 
 function sampleState() {
@@ -92,5 +92,35 @@ describe("AI output validation", () => {
     expect(draft.season.outcomes).toHaveLength(2);
     expect(draft.projects).toHaveLength(3);
     expect(draft.projects[0].domainKey).toBe("work");
+  });
+});
+
+describe("NVIDIA AI request", () => {
+  it("Kimi가 지원하지 않는 structured output 옵션을 보내지 않는다", async () => {
+    let requestBody;
+    const fetchImpl = async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        json: async () => ({
+          model: "moonshotai/kimi-k2.6",
+          choices: [{ message: { content: '{"title":"ok"}' } }],
+        }),
+      };
+    };
+
+    await requestAI(
+      [{ role: "user", content: "test" }],
+      {
+        AI_PROVIDER: "nvidia",
+        AI_BASE_URL: "https://integrate.api.nvidia.com/v1",
+        AI_MODEL: "moonshotai/kimi-k2.6",
+        AI_API_KEY: "test-key",
+      },
+      fetchImpl
+    );
+
+    expect(requestBody.temperature).toBe(1);
+    expect(requestBody).not.toHaveProperty("response_format");
   });
 });

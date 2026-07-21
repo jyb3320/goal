@@ -104,7 +104,11 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     await kv.decr(rateKey).catch(() => {});
-    console.error("ai request failed", error?.code || error?.message);
+    console.error("ai request failed", {
+      code: error?.code || "unknown",
+      status: error?.status || 0,
+      providerBody: error?.providerBody || "",
+    });
     const out = friendlyError(error);
     return res.status(out.status).json({ error: out.code, message: out.message });
   }

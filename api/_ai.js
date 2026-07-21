@@ -498,9 +498,8 @@ export async function requestAI(messages, env = process.env, fetchImpl = fetch) 
       : {
           model: config.model,
           messages,
-          temperature: 0.2,
+          temperature: 1,
           max_tokens: 2200,
-          response_format: { type: "json_object" },
           stream: false,
         };
     const response = await fetchImpl(url, {
@@ -513,9 +512,11 @@ export async function requestAI(messages, env = process.env, fetchImpl = fetch) 
       signal: controller.signal,
     });
     if (!response.ok) {
+      const providerBody = await response.text().catch(() => "");
       const error = new Error(response.status === 429 ? "오늘 AI 사용량이 많아 잠시 쉬어야 합니다." : "AI 제공업체가 요청을 처리하지 못했습니다.");
       error.code = response.status === 429 ? "rate_limited" : "provider_error";
       error.status = response.status;
+      error.providerBody = providerBody.slice(0, 500);
       throw error;
     }
     const payload = await response.json();
