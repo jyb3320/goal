@@ -52,7 +52,8 @@ function pickState(data) {
 
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
-  const [view, setView] = useState("board");
+  const [view, setView] = useState("board"); // 'board' | 'design' | 'history' | 'village'
+  const [designTab, setDesignTab] = useState("compass"); // 설계실 내부: compass | season | reflection | advisor
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
@@ -294,6 +295,47 @@ export default function App() {
     if (missed.length === 0) return null;
     return `밤 9시가 넘었어요 — 아직 안 찍은 도장이 ${missed.length}개 있어요!`;
   }, [myGoals, checkinSet, clock]);
+
+  // ----- 시점 프롬프트: 주기가 된 인생 설계 작업을 오늘 화면으로 불러온다 -----
+  // 탭을 찾아가는 대신, 복기·시즌 같은 저빈도 작업이 때가 되면 먼저 말을 건다.
+  const cadencePrompt = useMemo(() => {
+    if (!loaded) return null;
+    const dow = new Date(clock).getDay(); // 0=일, 5=금, 6=토
+    const thisWeekStart = weekDates(0)[0];
+
+    // 1) 주말이 되면 이번 주 복기 유도 (아직 이번 주 복기를 안 썼을 때만)
+    const wroteThisWeek = state.weeklyReviews.some(
+      (r) => r.owner === me && r.weekStart === thisWeekStart
+    );
+    if ((dow === 5 || dow === 6 || dow === 0) && !wroteThisWeek) {
+      return {
+        key: `weekly_${thisWeekStart}`,
+        icon: "省",
+        text: "이번 주를 돌아볼 시간이에요. 5분이면 충분해요.",
+        cta: "주간 복기 열기",
+        tab: "reflection",
+      };
+    }
+
+    // 2) 활성 12주 시즌이 없으면 방향 설정 유도 (목표가 하나라도 있을 때만)
+    if (!myActiveSeason && myGoals.length > 0) {
+      return {
+        key: "season_setup",
+        icon: "旬",
+        text: "오늘의 도장이 어디로 향하는지 정해두면 덜 흔들려요.",
+        cta: "12주 시즌 정하기",
+        tab: "season",
+      };
+    }
+    return null;
+  }, [loaded, clock, state.weeklyReviews, me, myActiveSeason, myGoals.length]);
+
+  const [dismissedCadence, setDismissedCadence] = useState(null);
+
+  const goToDesign = (tab) => {
+    setDesignTab(tab);
+    setView("design");
+  };
 
   // ----- 게임 HUD: XP / 레벨 / 오늘 진행률 -----
   const myXP = computeXP(me, state);
@@ -553,6 +595,12 @@ export default function App() {
 
   const otherLevel = otherName ? levelOf(computeXP(otherName, state)) : null;
 
+  // 목표가 연결된 활성 시즌(내 것이든 친구 것이든)을 찾아 카드에 수직선으로 보여준다
+  const seasonOf = (goal) =>
+    goal.seasonId
+      ? state.seasons.find((s) => s.id === goal.seasonId && s.status === "active") || null
+      : null;
+
   const renderGoalCard = (goal, isMine) =>
     goal.type === "milestone" ? (
       <MilestoneGoalCard
@@ -562,6 +610,7 @@ export default function App() {
         current={progressSum[goal.id] || 0}
         reactions={state.reactions}
         me={me}
+        season={seasonOf(goal)}
         onAddProgress={addProgress}
         onSaveFailureReason={saveFailureReason}
         onToggleReaction={toggleReaction}
@@ -576,6 +625,7 @@ export default function App() {
         reactions={state.reactions}
         excuses={state.excuses}
         me={me}
+        season={seasonOf(goal)}
         onToggleCheckin={toggleCheckin}
         onToggleReaction={toggleReaction}
         onDelete={deleteGoal}
@@ -614,17 +664,8 @@ export default function App() {
         <button type="button" className={view === "board" ? "active" : ""} onClick={() => setView("board")}>
           <span>今日</span> 오늘
         </button>
-        <button type="button" className={view === "compass" ? "active" : ""} onClick={() => setView("compass")}>
-          <span>北</span> 나침반
-        </button>
-        <button type="button" className={view === "season" ? "active" : ""} onClick={() => setView("season")}>
-          <span>旬</span> 12주
-        </button>
-        <button type="button" className={view === "reflection" ? "active" : ""} onClick={() => setView("reflection")}>
-          <span>省</span> 복기
-        </button>
-        <button type="button" className={view === "advisor" ? "active" : ""} onClick={() => setView("advisor")}>
-          <span>參</span> AI 참모
+        <button type="button" className={view === "design" ? "active" : ""} onClick={() => setView("design")}>
+          <span>設</span> 설계실
         </button>
         <button type="button" className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
           <span>記</span> 기록
@@ -634,52 +675,76 @@ export default function App() {
         </button>
       </nav>
 
-      {view === "compass" && (
-        <LifeCompass
-          state={state}
-          me={me}
-          otherName={otherName}
-          onSaveProfile={saveLifeProfile}
-          onSaveDomain={saveLifeDomain}
-        />
-      )}
+      {view === "design" && (
+        <div className="design-room">
+          <div className="design-intro">
+            <p className="eyebrow">인생 설계실</p>
+            <h2>가끔 들러 방향을 손보는 곳</h2>
+            <p className="design-sub">매일 올 필요는 없어요. 삶의 방향과 12주 계획을 정하고, 주기가 되면 복기하고, 막힐 땐 AI 참모에게 물어보세요.</p>
+          </div>
+          <div className="design-subnav" role="tablist" aria-label="설계실 메뉴">
+            <button type="button" role="tab" aria-selected={designTab === "compass"} className={designTab === "compass" ? "active" : ""} onClick={() => setDesignTab("compass")}>
+              <span>北</span> 나침반
+            </button>
+            <button type="button" role="tab" aria-selected={designTab === "season"} className={designTab === "season" ? "active" : ""} onClick={() => setDesignTab("season")}>
+              <span>旬</span> 12주
+            </button>
+            <button type="button" role="tab" aria-selected={designTab === "reflection"} className={designTab === "reflection" ? "active" : ""} onClick={() => setDesignTab("reflection")}>
+              <span>省</span> 복기
+            </button>
+            <button type="button" role="tab" aria-selected={designTab === "advisor"} className={designTab === "advisor" ? "active" : ""} onClick={() => setDesignTab("advisor")}>
+              <span>參</span> AI 참모
+            </button>
+          </div>
 
-      {view === "season" && (
-        <SeasonBoard
-          state={state}
-          me={me}
-          otherName={otherName}
-          goals={myGoals}
-          onSaveSeason={saveSeason}
-          onCloseSeason={closeSeason}
-          onAddItem={addLifeItem}
-          onUpdateItem={updateLifeItem}
-          onDeleteItem={deleteLifeItem}
-          onLinkGoal={linkGoal}
-        />
-      )}
+          {designTab === "compass" && (
+            <LifeCompass
+              state={state}
+              me={me}
+              otherName={otherName}
+              onSaveProfile={saveLifeProfile}
+              onSaveDomain={saveLifeDomain}
+            />
+          )}
 
-      {view === "reflection" && (
-        <ReflectionHub
-          state={state}
-          me={me}
-          otherName={otherName}
-          onSaveWeekly={saveWeeklyReview}
-          onSaveMonthly={saveMonthlyReview}
-          onAddDecision={addDecision}
-          onUpdateDecision={updateDecision}
-          onDeleteDecision={deleteDecision}
-        />
-      )}
+          {designTab === "season" && (
+            <SeasonBoard
+              state={state}
+              me={me}
+              otherName={otherName}
+              goals={myGoals}
+              onSaveSeason={saveSeason}
+              onCloseSeason={closeSeason}
+              onAddItem={addLifeItem}
+              onUpdateItem={updateLifeItem}
+              onDeleteItem={deleteLifeItem}
+              onLinkGoal={linkGoal}
+            />
+          )}
 
-      {view === "advisor" && (
-        <AIAdvisor
-          state={state}
-          me={me}
-          otherName={otherName}
-          onApplyDraft={applyAiGoalDraft}
-          onToast={showToast}
-        />
+          {designTab === "reflection" && (
+            <ReflectionHub
+              state={state}
+              me={me}
+              otherName={otherName}
+              onSaveWeekly={saveWeeklyReview}
+              onSaveMonthly={saveMonthlyReview}
+              onAddDecision={addDecision}
+              onUpdateDecision={updateDecision}
+              onDeleteDecision={deleteDecision}
+            />
+          )}
+
+          {designTab === "advisor" && (
+            <AIAdvisor
+              state={state}
+              me={me}
+              otherName={otherName}
+              onApplyDraft={applyAiGoalDraft}
+              onToast={showToast}
+            />
+          )}
+        </div>
       )}
 
       {view === "village" && <Village state={state} me={me} otherName={otherName} />}
@@ -725,6 +790,26 @@ export default function App() {
               <span className="xp-line-meta">다음 레벨까지 {xpNeed - (myXP - xpBase)} XP · 마을 →</span>
             </button>
           </section>
+
+          {cadencePrompt && cadencePrompt.key !== dismissedCadence && (
+            <div className="cadence-prompt">
+              <span className="cadence-icon" aria-hidden="true">{cadencePrompt.icon}</span>
+              <div className="cadence-body">
+                <p>{cadencePrompt.text}</p>
+                <button type="button" className="cadence-cta" onClick={() => goToDesign(cadencePrompt.tab)}>
+                  {cadencePrompt.cta} →
+                </button>
+              </div>
+              <button
+                type="button"
+                className="cadence-dismiss"
+                onClick={() => setDismissedCadence(cadencePrompt.key)}
+                aria-label="나중에"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {loaded && (
             <BigGoalPanel

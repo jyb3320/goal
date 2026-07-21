@@ -11,6 +11,7 @@ export default function StampGoalCard({
   reactions,
   excuses,
   me,
+  season,
   onToggleCheckin,
   onToggleReaction,
   onDelete,
@@ -70,6 +71,12 @@ export default function StampGoalCard({
         </div>
         <div className={`streak-badge ${badge.startsWith("오늘부터") ? "zero" : ""}`}>{badge}</div>
       </div>
+      {season && (
+        <div className="goal-thread" title={`이 도장이 12주 시즌 '${season.title}'에 쌓여요`}>
+          <span className="thread-line" aria-hidden="true" />
+          旬 {season.title}에 기여
+        </div>
+      )}
       <div className="stamp-row">
         {days.map((d) => {
           const key = `${goal.id}_${d}`;

@@ -10,6 +10,7 @@ export default function MilestoneGoalCard({
   current,
   reactions,
   me,
+  season,
   onAddProgress,
   onSaveFailureReason,
   onToggleReaction,
@@ -72,6 +73,12 @@ export default function MilestoneGoalCard({
           {done ? "달성! 🎉" : expired ? "실패 이유 필요" : dday || "기한 없음"}
         </div>
       </div>
+      {season && (
+        <div className="goal-thread" title={`이 목표가 12주 시즌 '${season.title}'에 쌓여요`}>
+          <span className="thread-line" aria-hidden="true" />
+          旬 {season.title}에 기여
+        </div>
+      )}
       {expired && (
         <div className="expired-note">
           마감일이 지났어요. 실패 이유를 남기면 현황판에서 정리되고 기록-반성 노트에 보관돼요.
