@@ -501,6 +501,9 @@ export async function requestAI(messages, env = process.env, fetchImpl = fetch) 
           temperature: 1,
           max_tokens: 2200,
           stream: false,
+          ...(config.model.startsWith("qwen/qwen3.5-")
+            ? { chat_template_kwargs: { enable_thinking: false } }
+            : {}),
         };
     const response = await fetchImpl(url, {
       method: "POST",

@@ -123,4 +123,31 @@ describe("NVIDIA AI request", () => {
     expect(requestBody.temperature).toBe(1);
     expect(requestBody).not.toHaveProperty("response_format");
   });
+
+  it("Qwen 3.5의 thinking 모드를 꺼서 응답 지연을 줄인다", async () => {
+    let requestBody;
+    const fetchImpl = async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return {
+        ok: true,
+        json: async () => ({
+          model: "qwen/qwen3.5-397b-a17b",
+          choices: [{ message: { content: '{"title":"ok"}' } }],
+        }),
+      };
+    };
+
+    await requestAI(
+      [{ role: "user", content: "test" }],
+      {
+        AI_PROVIDER: "nvidia",
+        AI_BASE_URL: "https://integrate.api.nvidia.com/v1",
+        AI_MODEL: "qwen/qwen3.5-397b-a17b",
+        AI_API_KEY: "test-key",
+      },
+      fetchImpl
+    );
+
+    expect(requestBody.chat_template_kwargs).toEqual({ enable_thinking: false });
+  });
 });
