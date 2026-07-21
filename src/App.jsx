@@ -331,11 +331,18 @@ export default function App() {
   }, [loaded, clock, state.weeklyReviews, me, myActiveSeason, myGoals.length]);
 
   const [dismissedCadence, setDismissedCadence] = useState(null);
+  const [advisorMode, setAdvisorMode] = useState("weekly");
 
-  const goToDesign = (tab) => {
+  const goToDesign = (tab, aiMode) => {
+    if (aiMode) setAdvisorMode(aiMode);
     setDesignTab(tab);
     setView("design");
   };
+
+  const friendActiveSeason = useMemo(
+    () => (otherName ? state.seasons.find((s) => s.owner === otherName && s.status === "active") || null : null),
+    [state.seasons, otherName]
+  );
 
   // ----- 게임 HUD: XP / 레벨 / 오늘 진행률 -----
   const myXP = computeXP(me, state);
@@ -382,11 +389,11 @@ export default function App() {
     mutate({ action: "deleteGoal", goalId: goal.id });
   };
 
-  const toggleCheckin = (goalId, date) => {
+  const toggleCheckin = (goalId, date, min = false) => {
     const exists = checkinSet.has(`${goalId}_${date}`);
     const nextCheckins = exists
       ? state.checkins.filter((c) => !(c.goalId === goalId && c.date === date))
-      : [...state.checkins, { goalId, date }];
+      : [...state.checkins, min ? { goalId, date, min: true } : { goalId, date }];
     // 이 도장으로 오늘 목표를 전부 채우면 올클리어 축하
     if (!exists && date === todayStr(0)) {
       const nextSet = new Set(nextCheckins.map((c) => `${c.goalId}_${c.date}`));
@@ -402,8 +409,11 @@ export default function App() {
         }, 300);
       }
     }
-    mutate({ action: "toggleCheckin", goalId, date }, { ...state, checkins: nextCheckins });
+    mutate({ action: "toggleCheckin", goalId, date, min }, { ...state, checkins: nextCheckins });
   };
+
+  const updateGoal = (goalId, fields) =>
+    mutate({ action: "updateGoal", goalId, ...fields });
 
   const toggleReaction = (goalId, emoji) => {
     const date = todayStr(0);
@@ -622,12 +632,14 @@ export default function App() {
         goal={goal}
         isMine={isMine}
         checkinSet={checkinSet}
+        checkins={state.checkins}
         reactions={state.reactions}
         excuses={state.excuses}
         me={me}
         season={seasonOf(goal)}
         onToggleCheckin={toggleCheckin}
         onToggleReaction={toggleReaction}
+        onUpdateGoal={updateGoal}
         onDelete={deleteGoal}
         onPeekExcuse={peekExcuse}
       />
@@ -832,7 +844,7 @@ export default function App() {
           {missedYesterday.length > 0 && (
             <MissedPanel
               goals={missedYesterday}
-              onStamp={(goalId) => toggleCheckin(goalId, todayStr(-1))}
+              onStamp={(goalId, min) => toggleCheckin(goalId, todayStr(-1), min)}
               onSaveReason={saveExcuse}
             />
           )}

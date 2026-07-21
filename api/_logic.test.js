@@ -60,6 +60,58 @@ describe("접속 (이름만, 비밀번호 없음)", () => {
   });
 });
 
+describe("성실 시스템 (최소 버전 · 신호)", () => {
+  it("매일 목표에 최소 버전과 신호를 저장한다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const r = b.post({
+      action: "addGoal",
+      name: "햄",
+      goal: { title: "러닝", minimumVersion: "운동화만 신고 5분", cue: "기상 직후" },
+    });
+    const goal = r.respond.goals[0];
+    expect(goal.minimumVersion).toBe("운동화만 신고 5분");
+    expect(goal.cue).toBe("기상 직후");
+  });
+
+  it("기간 목표에는 최소 버전을 붙이지 않는다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const r = b.post({
+      action: "addGoal",
+      name: "햄",
+      goal: { title: "책 읽기", type: "milestone", target: 100, minimumVersion: "무시됨" },
+    });
+    expect(r.respond.goals[0].minimumVersion).toBeUndefined();
+  });
+
+  it("updateGoal로 기존 목표에 최소 버전을 추가하고, 남의 것은 막는다", () => {
+    const { b, goal } = twoUsers();
+    const ok = b.post({ action: "updateGoal", name: "햄", goalId: goal.id, minimumVersion: "5분만", cue: "저녁" });
+    const updated = ok.respond.goals.find((g) => g.id === goal.id);
+    expect(updated.minimumVersion).toBe("5분만");
+    expect(updated.cue).toBe("저녁");
+    expect(b.post({ action: "updateGoal", name: "쥐", goalId: goal.id, minimumVersion: "훔침" }).status).toBe(403);
+  });
+
+  it("min:true 도장은 연속을 살리되 min 플래그로 구분된다", () => {
+    const { b, goal } = twoUsers();
+    const today = seoulToday();
+    const r = b.post({ action: "toggleCheckin", name: "햄", goalId: goal.id, date: today, min: true });
+    const checkin = r.respond.checkins.find((c) => c.goalId === goal.id && c.date === today);
+    expect(checkin).toBeTruthy();
+    expect(checkin.min).toBe(true);
+  });
+
+  it("일반 도장에는 min 플래그가 없다", () => {
+    const { b, goal } = twoUsers();
+    const today = seoulToday();
+    const r = b.post({ action: "toggleCheckin", name: "햄", goalId: goal.id, date: today });
+    const checkin = r.respond.checkins.find((c) => c.goalId === goal.id && c.date === today);
+    expect(checkin.min).toBeUndefined();
+  });
+});
+
 describe("AI 목표 초안 승인 등록", () => {
   it("사용자가 선택한 시즌과 항목만 등록한다", () => {
     const b = freshBoard();

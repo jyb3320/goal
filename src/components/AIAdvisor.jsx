@@ -173,12 +173,13 @@ function GoalDraftView({ draft, activeSeason, onChange, onApply, applying, onCle
   );
 }
 
-export default function AIAdvisor({ state, me, otherName, onApplyDraft, onToast }) {
+export default function AIAdvisor({ state, me, otherName, onApplyDraft, onToast, initialMode }) {
   const savedBigGoal = state.bigGoals.find((goal) => goal.owner === me)?.text || "";
   const activeSeason = state.seasons.find((season) => season.owner === me && season.status === "active") || null;
   const myDecisions = state.decisions.filter((decision) => decision.owner === me).slice().reverse();
-  const [mode, setMode] = useState("weekly");
-  const [scopes, setScopes] = useState(DEFAULT_SCOPES.weekly);
+  const startMode = MODES.some((m) => m.key === initialMode) ? initialMode : "weekly";
+  const [mode, setMode] = useState(startMode);
+  const [scopes, setScopes] = useState(DEFAULT_SCOPES[startMode]);
   const [objective, setObjective] = useState(savedBigGoal);
   const [decisionId, setDecisionId] = useState(myDecisions[0]?.id || "");
   const [pin, setPin] = useState(() => sessionStorage.getItem("sg_ai_pin") || "");

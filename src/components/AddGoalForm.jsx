@@ -15,6 +15,8 @@ export default function AddGoalForm({ onAdd, onCancel, activeSeason }) {
   const [deadline, setDeadline] = useState("");
   const [domainKey, setDomainKey] = useState("");
   const [linkSeason, setLinkSeason] = useState(!!activeSeason);
+  const [minimumVersion, setMinimumVersion] = useState("");
+  const [cue, setCue] = useState("");
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
@@ -31,6 +33,9 @@ export default function AddGoalForm({ onAdd, onCancel, activeSeason }) {
       goal.target = parseInt(target, 10);
       goal.unit = unit.trim() || "개";
       goal.deadline = deadline;
+    } else {
+      goal.minimumVersion = minimumVersion.trim();
+      goal.cue = cue.trim();
     }
     setSaving(true);
     const ok = await onAdd(goal);
@@ -79,6 +84,29 @@ export default function AddGoalForm({ onAdd, onCancel, activeSeason }) {
             <input type="date" value={deadline} min={todayStr(0)} onChange={(e) => setDeadline(e.target.value)} />
           </div>
         </>
+      )}
+      {type === "daily" && (
+        <div className="consistency-fields">
+          <p className="consistency-hint">바쁜 날 무너지지 않게 미리 정해두면 성실함이 습관이 돼요. (선택)</p>
+          <label>
+            <span>바쁜 날 최소치</span>
+            <input
+              value={minimumVersion}
+              onChange={(e) => setMinimumVersion(e.target.value)}
+              placeholder="예: 운동화만 신고 5분 걷기"
+              maxLength={80}
+            />
+          </label>
+          <label>
+            <span>언제·어디서</span>
+            <input
+              value={cue}
+              onChange={(e) => setCue(e.target.value)}
+              placeholder="예: 아침 기상 직후, 현관에서"
+              maxLength={60}
+            />
+          </label>
+        </div>
       )}
       <div className="goal-context-fields">
         <label>

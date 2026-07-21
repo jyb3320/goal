@@ -560,8 +560,21 @@ export function applyAction(state, body, user) {
         goal.unit = str(g.unit, 10) || "개";
         goal.deadline = str(g.deadline, 10);
         goal.status = "active";
+      } else {
+        // 성실 시스템: 바쁜 날 붕괴를 막는 최소 버전 + 실행 신호(언제/어디서)
+        goal.minimumVersion = str(g.minimumVersion, 80);
+        goal.cue = str(g.cue, 60);
       }
       state.goals.push(goal);
+      return {};
+    }
+
+    case "updateGoal": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      if (!goal) return { noop: true };
+      if (goal.owner !== user) return { error: "본인 목표만 수정할 수 있어요", status: 403 };
+      if ("minimumVersion" in body) goal.minimumVersion = str(body.minimumVersion, 80);
+      if ("cue" in body) goal.cue = str(body.cue, 60);
       return {};
     }
 
@@ -624,7 +637,10 @@ export function applyAction(state, body, user) {
           (c) => !(c.goalId === goal.id && c.date === date)
         );
       } else {
-        state.checkins.push({ goalId: goal.id, date });
+        // min:true = 바쁜 날 최소 버전만 수행. 연속은 살지만 정직하게 따로 표시한다.
+        const checkin = { goalId: goal.id, date };
+        if (body.min === true) checkin.min = true;
+        state.checkins.push(checkin);
       }
       return {};
     }
