@@ -14,6 +14,7 @@ function seoulDate(value) {
 export default function HistoryView({ goals, checkins, progress, excuses, me, otherName }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [who, setWho] = useState(me);
+  const [selectedDate, setSelectedDate] = useState(todayStr(0));
 
   const base = new Date();
   base.setDate(1);
@@ -79,21 +80,29 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
       .sort((a, b) => ((a.failedDate || a.failedAt || "") < (b.failedDate || b.failedAt || "") ? 1 : -1));
   }, [goals, who, monthPrefix]);
 
-  const completedMilestones = useMemo(() => {
+  const completionDateByGoal = useMemo(() => {
     const latestProgressDate = new Map();
     for (const item of progress) {
       const current = latestProgressDate.get(item.goalId) || "";
       if (item.date > current) latestProgressDate.set(item.goalId, item.date);
     }
-    return goals
+    return new Map(goals
       .filter((goal) => goal.owner === who && goal.type === "milestone" && goal.status === "completed")
-      .map((goal) => ({
-        goal,
-        completedDate: seoulDate(goal.completedAt) || latestProgressDate.get(goal.id) || "",
-      }))
-      .filter(({ completedDate }) => completedDate.startsWith(monthPrefix))
-      .sort((a, b) => (a.completedDate < b.completedDate ? 1 : -1));
-  }, [goals, progress, who, monthPrefix]);
+      .map((goal) => [goal.id, seoulDate(goal.completedAt) || latestProgressDate.get(goal.id) || ""]));
+  }, [goals, progress, who]);
+
+  const selectedAchievements = useMemo(() => {
+    if (!selectedDate) return [];
+    const myGoals = goals.filter((goal) => goal.owner === who);
+    const goalById = new Map(myGoals.map((goal) => [goal.id, goal]));
+    const daily = checkins
+      .filter((item) => item.date === selectedDate && goalById.has(item.goalId))
+      .map((item) => ({ goal: goalById.get(item.goalId), minimum: item.min === true, kind: "daily" }));
+    const milestones = myGoals
+      .filter((goal) => goal.type === "milestone" && completionDateByGoal.get(goal.id) === selectedDate)
+      .map((goal) => ({ goal, minimum: false, kind: "milestone" }));
+    return [...daily, ...milestones];
+  }, [goals, checkins, who, selectedDate, completionDateByGoal]);
 
   return (
     <div className="history">
@@ -115,7 +124,10 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
         <div className="history-month">
           <button
             type="button"
-            onClick={() => setMonthOffset(monthOffset - 1)}
+            onClick={() => {
+              setMonthOffset(monthOffset - 1);
+              setSelectedDate("");
+            }}
             disabled={monthOffset <= MIN_OFFSET}
             aria-label="이전 달"
           >
@@ -126,7 +138,10 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
           </span>
           <button
             type="button"
-            onClick={() => setMonthOffset(monthOffset + 1)}
+            onClick={() => {
+              setMonthOffset(monthOffset + 1);
+              setSelectedDate("");
+            }}
             disabled={monthOffset >= 0}
             aria-label="다음 달"
           >
@@ -145,20 +160,24 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
           c === null ? (
             <span key={`e${i}`} />
           ) : (
-            <span
+            <button
+              type="button"
               key={c.date}
               className={[
                 "history-cell",
                 `h${heat(c.count)}`,
                 c.date === today ? "today" : "",
+                c.date === selectedDate ? "selected" : "",
                 c.future ? "future" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               title={`${c.date} · 도장 ${c.count}개`}
+              disabled={c.future}
+              onClick={() => setSelectedDate(c.date)}
             >
               {c.d}
-            </span>
+            </button>
           )
         )}
       </div>
@@ -180,28 +199,35 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
         </ul>
       )}
 
-      {completedMilestones.length > 0 && (
-        <div className="reflect completed-reflect">
+      {selectedDate && (
+        <div className="reflect day-achievements">
           <div className="reflect-head">
-            <span className="reflect-title">달성한 목표</span>
-            <span className="reflect-count">{completedMilestones.length}개 달성</span>
+            <span className="reflect-title">
+              {parseInt(selectedDate.slice(5, 7), 10)}월 {parseInt(selectedDate.slice(8), 10)}일 달성한 목표
+            </span>
+            <span className="reflect-count">{selectedAchievements.length}개</span>
           </div>
-          <ul className="completed-list">
-            {completedMilestones.map(({ goal, completedDate }) => (
-              <li key={goal.id}>
-                <span className="completed-seal" aria-hidden="true">完</span>
-                <div className="completed-copy">
-                  <strong>{goal.icon} {goal.title}</strong>
-                  <span>
-                    {parseInt(completedDate.slice(8), 10)}일 달성
-                    {" · "}
-                    {goal.target} {goal.unit} 완료
-                    {goal.deadline ? ` · 마감 ${goal.deadline}` : ""}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {selectedAchievements.length > 0 ? (
+            <ul className="completed-list">
+              {selectedAchievements.map(({ goal, minimum, kind }) => (
+                <li key={`${kind}_${goal.id}`}>
+                  <span className="completed-seal" aria-hidden="true">完</span>
+                  <div className="completed-copy">
+                    <strong>{goal.icon} {goal.title}</strong>
+                    <span>
+                      {kind === "milestone"
+                        ? `${goal.target} ${goal.unit} 최종 달성${goal.deadline ? ` · 마감 ${goal.deadline}` : ""}`
+                        : minimum
+                          ? "최소 버전 달성"
+                          : "도장 완료"}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="day-achievements-empty">이날 달성한 목표가 없어요.</p>
+          )}
         </div>
       )}
 

@@ -2658,15 +2658,18 @@ textarea:focus-visible {
 }
 
 .history-cell {
+  appearance: none;
   aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 0;
   border-radius: 4px;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--ink-soft);
   background: var(--paper-deep);
+  cursor: pointer;
 }
 
 .history-cell.h1 {
@@ -2689,13 +2692,28 @@ textarea:focus-visible {
   color: #fdf6e8;
 }
 
+.history-cell:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px rgba(181, 50, 40, 0.38);
+}
+
+.history-cell.selected {
+  outline: 2px solid var(--stamp-red);
+  outline-offset: -2px;
+  font-weight: 800;
+}
+
 .history-cell.today {
   outline: 2px solid var(--teal);
   outline-offset: -2px;
 }
 
+.history-cell.today.selected {
+  box-shadow: inset 0 0 0 2px var(--stamp-red);
+}
+
 .history-cell.future {
   opacity: 0.35;
+  cursor: default;
 }
 
 .history-total {
@@ -2737,7 +2755,7 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
-.completed-reflect {
+.day-achievements {
   border-color: rgba(184, 139, 47, 0.38);
   background: linear-gradient(135deg, rgba(217, 169, 74, 0.09), rgba(255, 252, 242, 0.72));
 }
@@ -2794,6 +2812,14 @@ textarea:focus-visible {
   color: var(--ink-soft);
   font-family: var(--font-mono);
   font-size: 11px;
+}
+
+.day-achievements-empty {
+  margin: 0;
+  padding: 12px;
+  color: var(--ink-soft);
+  text-align: center;
+  font-size: 13px;
 }
 
 /* ==========================================================
