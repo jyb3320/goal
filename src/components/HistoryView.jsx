@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fmtDate, todayStr, DOW } from "../lib/dates.js";
 
 const MIN_OFFSET = -12; // 서버가 도장 기록을 약 1년만 원본으로 보관
@@ -14,7 +14,7 @@ function seoulDate(value) {
 export default function HistoryView({ goals, checkins, progress, excuses, me, otherName }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [who, setWho] = useState(me);
-  const [selectedDate, setSelectedDate] = useState(todayStr(0));
+  const [selectedDate, setSelectedDate] = useState("");
 
   const base = new Date();
   base.setDate(1);
@@ -103,6 +103,15 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
       .map((goal) => ({ goal, minimum: false, kind: "milestone" }));
     return [...daily, ...milestones];
   }, [goals, checkins, who, selectedDate, completionDateByGoal]);
+
+  useEffect(() => {
+    if (!selectedDate) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setSelectedDate("");
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [selectedDate]);
 
   return (
     <div className="history">
@@ -199,38 +208,6 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
         </ul>
       )}
 
-      {selectedDate && (
-        <div className="reflect day-achievements">
-          <div className="reflect-head">
-            <span className="reflect-title">
-              {parseInt(selectedDate.slice(5, 7), 10)}월 {parseInt(selectedDate.slice(8), 10)}일 달성한 목표
-            </span>
-            <span className="reflect-count">{selectedAchievements.length}개</span>
-          </div>
-          {selectedAchievements.length > 0 ? (
-            <ul className="completed-list">
-              {selectedAchievements.map(({ goal, minimum, kind }) => (
-                <li key={`${kind}_${goal.id}`}>
-                  <span className="completed-seal" aria-hidden="true">完</span>
-                  <div className="completed-copy">
-                    <strong>{goal.icon} {goal.title}</strong>
-                    <span>
-                      {kind === "milestone"
-                        ? `${goal.target} ${goal.unit} 최종 달성${goal.deadline ? ` · 마감 ${goal.deadline}` : ""}`
-                        : minimum
-                          ? "최소 버전 달성"
-                          : "도장 완료"}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="day-achievements-empty">이날 달성한 목표가 없어요.</p>
-          )}
-        </div>
-      )}
-
       {monthExcuses.length > 0 && (
         <div className="reflect">
           <div className="reflect-head">
@@ -282,6 +259,62 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
               );
             })}
           </ul>
+        </div>
+      )}
+
+      {selectedDate && (
+        <div className="history-note-backdrop" onClick={() => setSelectedDate("")}>
+          <section
+            className="history-note"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="history-note-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="history-note-close"
+              onClick={() => setSelectedDate("")}
+              aria-label="날짜 기록 닫기"
+            >
+              ×
+            </button>
+            <div className="history-note-date">
+              <span>{selectedDate.slice(0, 4)}</span>
+              <strong id="history-note-title">
+                {parseInt(selectedDate.slice(5, 7), 10)}월 {parseInt(selectedDate.slice(8), 10)}일
+              </strong>
+            </div>
+            <div className="history-note-heading">
+              <span>完</span>
+              <div>
+                <h3>이날 달성한 목표</h3>
+                <p>{who === me ? "나" : who}의 기록 · {selectedAchievements.length}개</p>
+              </div>
+            </div>
+            {selectedAchievements.length > 0 ? (
+              <ul className="completed-list history-note-list">
+                {selectedAchievements.map(({ goal, minimum, kind }) => (
+                  <li key={`${kind}_${goal.id}`}>
+                    <span className="completed-seal" aria-hidden="true">完</span>
+                    <div className="completed-copy">
+                      <strong>{goal.icon} {goal.title}</strong>
+                      <span>
+                        {kind === "milestone"
+                          ? `${goal.target} ${goal.unit} 최종 달성${goal.deadline ? ` · 마감 ${goal.deadline}` : ""}`
+                          : minimum
+                            ? "최소 버전 달성"
+                            : "도장 완료"}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="day-achievements-empty">이날 달성한 목표가 없어요.</p>
+            )}
+            <p className="history-note-foot">날짜를 기억하면, 꾸준함이 보입니다.</p>
+          </section>
         </div>
       )}
     </div>
