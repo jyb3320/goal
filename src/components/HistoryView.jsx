@@ -3,6 +3,13 @@ import { fmtDate, todayStr, DOW } from "../lib/dates.js";
 
 const MIN_OFFSET = -12; // 서버가 도장 기록을 약 1년만 원본으로 보관
 
+function seoulDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(date);
+}
+
 // 월간 달력 히트맵 + 목표별 합계 + 반성 노트
 export default function HistoryView({ goals, checkins, progress, excuses, me, otherName }) {
   const [monthOffset, setMonthOffset] = useState(0);
@@ -71,6 +78,22 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
       })
       .sort((a, b) => ((a.failedDate || a.failedAt || "") < (b.failedDate || b.failedAt || "") ? 1 : -1));
   }, [goals, who, monthPrefix]);
+
+  const completedMilestones = useMemo(() => {
+    const latestProgressDate = new Map();
+    for (const item of progress) {
+      const current = latestProgressDate.get(item.goalId) || "";
+      if (item.date > current) latestProgressDate.set(item.goalId, item.date);
+    }
+    return goals
+      .filter((goal) => goal.owner === who && goal.type === "milestone" && goal.status === "completed")
+      .map((goal) => ({
+        goal,
+        completedDate: seoulDate(goal.completedAt) || latestProgressDate.get(goal.id) || "",
+      }))
+      .filter(({ completedDate }) => completedDate.startsWith(monthPrefix))
+      .sort((a, b) => (a.completedDate < b.completedDate ? 1 : -1));
+  }, [goals, progress, who, monthPrefix]);
 
   return (
     <div className="history">
@@ -155,6 +178,31 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
             </li>
           ))}
         </ul>
+      )}
+
+      {completedMilestones.length > 0 && (
+        <div className="reflect completed-reflect">
+          <div className="reflect-head">
+            <span className="reflect-title">달성한 목표</span>
+            <span className="reflect-count">{completedMilestones.length}개 달성</span>
+          </div>
+          <ul className="completed-list">
+            {completedMilestones.map(({ goal, completedDate }) => (
+              <li key={goal.id}>
+                <span className="completed-seal" aria-hidden="true">完</span>
+                <div className="completed-copy">
+                  <strong>{goal.icon} {goal.title}</strong>
+                  <span>
+                    {parseInt(completedDate.slice(8), 10)}일 달성
+                    {" · "}
+                    {goal.target} {goal.unit} 완료
+                    {goal.deadline ? ` · 마감 ${goal.deadline}` : ""}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {monthExcuses.length > 0 && (

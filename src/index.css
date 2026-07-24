@@ -2737,6 +2737,65 @@ textarea:focus-visible {
   white-space: nowrap;
 }
 
+.completed-reflect {
+  border-color: rgba(184, 139, 47, 0.38);
+  background: linear-gradient(135deg, rgba(217, 169, 74, 0.09), rgba(255, 252, 242, 0.72));
+}
+
+.completed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.completed-list li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  border: 1px solid rgba(184, 139, 47, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 253, 247, 0.82);
+}
+
+.completed-seal {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 2px solid var(--stamp-red);
+  border-radius: 50%;
+  color: var(--stamp-red-deep);
+  font-family: var(--font-display);
+  font-size: 17px;
+  transform: rotate(-5deg);
+}
+
+.completed-copy {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.completed-copy strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completed-copy span {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 /* ==========================================================
    Life OS — 방향 · 12주 시즌 · 복기 · 결정
    ========================================================== */
