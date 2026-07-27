@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { computeXP, xpForLevel, levelOf, nextUnlock } from "./lib/xp.js";
+import {
+  computeXP,
+  xpForLevel,
+  levelOf,
+  nextUnlock,
+  recentXpEvents,
+  villageXpSummary,
+} from "./lib/xp.js";
+import { VILLAGE_ID } from "../shared/xp-config.js";
 import { buildVillageStatus } from "./lib/village.js";
 import VillagePanel from "./components/VillagePanel.jsx";
 
@@ -88,6 +96,8 @@ export default function Village({
 }) {
   const canvasRef = useRef(null);
   const [location, setLocation] = useState(null);
+  const [xpOpen, setXpOpen] = useState(false);
+  const [xpTab, setXpTab] = useState("personal");
   const villageStatus = useMemo(() => buildVillageStatus(state, me, otherName), [state, me, otherName]);
   const readKey = `goal-village-mail-read:${me}`;
   const [readEventKeys, setReadEventKeys] = useState(() => {
@@ -141,6 +151,12 @@ export default function Village({
   const nextNeed = xpForLevel(myLevel + 1) - curBase;
   const intoLevel = myXP - curBase;
   const unlock = nextUnlock(myLevel);
+  const villageSummary = villageXpSummary(state);
+  const xpHistory = recentXpEvents(
+    state,
+    xpTab === "personal" ? "USER" : "VILLAGE",
+    xpTab === "personal" ? me : VILLAGE_ID
+  );
 
   const levelsRef = useRef({ me: myLevel, fr: frLevel });
 
@@ -1096,7 +1112,7 @@ export default function Village({
     <div className="village-wrap">
       <canvas ref={canvasRef} className="village-canvas" />
       <div className="village-hud">
-        <div className="hud-card">
+        <button type="button" className="hud-card" onClick={() => { setXpTab("personal"); setXpOpen(true); }}>
           <div className="hud-name">
             {me} <span className="hud-level">Lv.{myLevel}</span>
           </div>
@@ -1107,7 +1123,7 @@ export default function Village({
             다음 레벨까지 {nextNeed - intoLevel} XP
             {unlock && ` · Lv.${unlock[0]}에 ${unlock[1]} 획득`}
           </div>
-        </div>
+        </button>
         {otherName && (
           <div className="hud-card hud-friend">
             <div className="hud-name">
@@ -1116,7 +1132,29 @@ export default function Village({
             <div className="hud-sub">{frXP} XP</div>
           </div>
         )}
+        <button type="button" className="hud-card hud-village" onClick={() => { setXpTab("village"); setXpOpen(true); }}>
+          <div className="hud-name">우리 마을 <span className="hud-level">Lv.{villageSummary.level}</span></div>
+          <div className="hud-xpbar village">
+            <div className="hud-xpfill" style={{ width: `${Math.round((villageSummary.intoLevel / villageSummary.needed) * 100)}%` }} />
+          </div>
+          <div className="hud-sub">{villageSummary.xp} / {villageSummary.next} XP</div>
+        </button>
       </div>
+      {xpOpen && (
+        <div className="xp-ledger" role="dialog" aria-label="XP 내역">
+          <button type="button" className="xp-ledger-close" onClick={() => setXpOpen(false)} aria-label="XP 내역 닫기">×</button>
+          <div className="xp-ledger-tabs">
+            <button type="button" className={xpTab === "personal" ? "active" : ""} onClick={() => setXpTab("personal")}>내 XP</button>
+            <button type="button" className={xpTab === "village" ? "active" : ""} onClick={() => setXpTab("village")}>마을 XP</button>
+          </div>
+          <ul>
+            {xpHistory.map((event) => (
+              <li key={event.id}><span>{event.label}</span><strong>+{event.xpAmount}</strong></li>
+            ))}
+            {xpHistory.length === 0 && <li className="empty">아직 쌓인 XP 기록이 없어요.</li>}
+          </ul>
+        </div>
+      )}
       <div className="village-place-dock" aria-label="마을 장소">
         {[
           ["meHouse", "🏠", "내 집"],

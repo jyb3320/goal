@@ -5,14 +5,18 @@ import { onEnter } from "../lib/ime.js";
 export default function MessageBoard({ messages, me, otherName, onSend, onDelete }) {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
   const recent = [...messages].slice(-5).reverse();
 
   const send = async () => {
     const text = input.trim();
     if (!text || sending) return;
     setSending(true);
-    const ok = await onSend(text);
-    if (ok) setInput("");
+    const ok = await onSend(text, replyTo?.id || "");
+    if (ok) {
+      setInput("");
+      setReplyTo(null);
+    }
     setSending(false);
   };
 
@@ -33,6 +37,12 @@ export default function MessageBoard({ messages, me, otherName, onSend, onDelete
           {sending ? "전송 중…" : "보내기"}
         </button>
       </div>
+      {replyTo && (
+        <div className="message-replying">
+          <span>{replyTo.from}에게 답장 중 · {replyTo.text}</span>
+          <button type="button" onClick={() => setReplyTo(null)} aria-label="답장 취소">×</button>
+        </div>
+      )}
       {recent.length > 0 && (
         <ul className="message-list">
           {recent.map((m) => (
@@ -40,6 +50,11 @@ export default function MessageBoard({ messages, me, otherName, onSend, onDelete
               <span className="msg-from">{m.from}</span>
               <span className="msg-text">{m.text}</span>
               <span className="msg-time">{timeAgo(m.createdAt)}</span>
+              {m.from !== me && (
+                <button type="button" className="msg-reply" onClick={() => setReplyTo(m)}>
+                  답장
+                </button>
+              )}
               {m.from === me && (
                 <button
                   type="button"

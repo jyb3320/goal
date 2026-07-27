@@ -1,5 +1,11 @@
 // 서버(Vercel 함수)와 vite 개발 서버가 함께 쓰는 순수 로직 모듈.
 // Redis 등 저장소 의존성은 여기 두지 않는다.
+import {
+  awardPersonalXp,
+  checkAndAwardSharedDailyXp,
+  getAppWeekKey,
+  XP_REWARDS,
+} from "./_xp.js";
 
 export const KEY = "goaltracker:state";
 export const MAX_USERS = 2;
@@ -35,6 +41,8 @@ export function emptyState() {
     decisions: [], // 중요한 결정과 사후 결과
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
+    xpEvents: [], // 개인·마을 XP 원장. dedupeKey가 논리적 unique 제약 역할을 한다.
+    xpVersion: 0,
   };
 }
 
@@ -100,7 +108,7 @@ export function normalize(raw) {
   for (const key of [
     "users", "goals", "checkins", "progress", "reactions", "messages", "pokes",
     "excuses", "goalMemos", "bigGoals", "lifeProfiles", "lifeDomains", "seasons",
-    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions",
+    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "xpEvents",
   ]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
@@ -126,7 +134,45 @@ export function normalize(raw) {
             updatedAt: m.updatedAt,
           }
     );
+  migrateLegacyXp(s);
   return s;
+}
+
+function legacyXpFor(user, state) {
+  const goals = state.goals.filter((goal) => goal.owner === user);
+  const ids = new Set(goals.map((goal) => goal.id));
+  const archived = state.archive?.[user]?.stamps || 0;
+  let xp = (archived + state.checkins.filter((checkin) => ids.has(checkin.goalId)).length) * 10;
+  for (const goal of goals) {
+    if (goal.type !== "milestone") continue;
+    const net = Math.max(0, progressTotal(state, goal.id));
+    xp += Math.min(net, goal.target) * 2;
+    if (net >= goal.target) xp += 30;
+  }
+  return xp;
+}
+
+function migrateLegacyXp(state) {
+  if (state.xpVersion >= 1) return;
+  for (const user of state.users) {
+    const dedupeKey = `legacy-user-xp:${user}`;
+    if (state.xpEvents.some((event) => event.dedupeKey === dedupeKey)) continue;
+    const amount = legacyXpFor(user, state);
+    if (amount <= 0) continue;
+    state.xpEvents.push({
+      id: newId("xp"),
+      recipientType: "USER",
+      recipientId: user,
+      eventType: "LEGACY_MIGRATION",
+      sourceType: "LEGACY_STATE",
+      sourceId: user,
+      xpAmount: amount,
+      dedupeKey,
+      createdAt: new Date().toISOString(),
+      metadata: { formula: "legacy-checkins-and-milestone-progress" },
+    });
+  }
+  state.xpVersion = 1;
 }
 
 // 클라이언트로 나가면 안 되는 필드 제거
@@ -454,7 +500,17 @@ export function applyAction(state, body, user) {
       const record = { id: existing?.id || newId("week"), owner: user, weekStart, ...fields, updatedAt: new Date().toISOString() };
       if (existing) Object.assign(existing, record);
       else state.weeklyReviews.push(record);
-      return {};
+      if (existing) return {};
+      const award = awardPersonalXp(state, {
+        recipientId: user,
+        eventType: "WEEKLY_REVIEW_COMPLETED",
+        sourceType: "WEEKLY_REVIEW",
+        sourceId: record.id,
+        weekKey: getAppWeekKey(weekStart),
+        amount: XP_REWARDS.WEEKLY_REVIEW_COMPLETED,
+        dedupeKey: `weekly-review:${user}:${getAppWeekKey(weekStart)}`,
+      });
+      return { xpAwards: [award] };
     }
 
     case "setMonthlyReview": {
@@ -641,6 +697,18 @@ export function applyAction(state, body, user) {
         const checkin = { goalId: goal.id, date };
         if (body.min === true) checkin.min = true;
         state.checkins.push(checkin);
+        const personal = awardPersonalXp(state, {
+          recipientId: user,
+          eventType: "DAILY_GOAL_COMPLETE",
+          sourceType: "DAILY_GOAL",
+          sourceId: goal.id,
+          dateKey: date,
+          amount: XP_REWARDS.DAILY_GOAL_COMPLETE,
+          dedupeKey: `daily-goal:${user}:${goal.id}:${date}`,
+          metadata: { goalTitle: goal.title },
+        });
+        const shared = checkAndAwardSharedDailyXp(state, date);
+        return { xpAwards: [personal, shared] };
       }
       return {};
     }
@@ -660,14 +728,37 @@ export function applyAction(state, body, user) {
       }
       state.progress.push({ id: newId("p"), goalId: goal.id, date: today, amount });
       const next = progressTotal(state, goal.id);
+      const awards = [];
+      if (amount > 0) {
+        awards.push(awardPersonalXp(state, {
+          recipientId: user,
+          eventType: "PERIOD_GOAL_PROGRESS",
+          sourceType: "MILESTONE_GOAL",
+          sourceId: goal.id,
+          dateKey: today,
+          amount: XP_REWARDS.PERIOD_GOAL_PROGRESS,
+          dedupeKey: `period-progress:${user}:${goal.id}:${today}`,
+          metadata: { goalTitle: goal.title },
+        }));
+      }
       if (next >= goal.target) {
         goal.status = "completed";
         goal.completedAt = goal.completedAt || new Date().toISOString();
+        awards.push(awardPersonalXp(state, {
+          recipientId: user,
+          eventType: "PERIOD_GOAL_COMPLETE",
+          sourceType: "MILESTONE_GOAL",
+          sourceId: goal.id,
+          dateKey: today,
+          amount: XP_REWARDS.PERIOD_GOAL_COMPLETE,
+          dedupeKey: `period-complete:${user}:${goal.id}`,
+          metadata: { goalTitle: goal.title },
+        }));
       } else if (goal.status === "completed") {
         goal.status = "active";
         delete goal.completedAt;
       }
-      return {};
+      return { xpAwards: awards };
     }
 
     case "addFailureReason": {
@@ -705,7 +796,19 @@ export function applyAction(state, body, user) {
       if (state.reactions.some(match)) {
         state.reactions = state.reactions.filter((r) => !match(r));
       } else {
-        state.reactions.push({ goalId: goal.id, date: today, emoji, by: user });
+        const reaction = { id: newId("r"), goalId: goal.id, date: today, emoji, by: user };
+        state.reactions.push(reaction);
+        const award = awardPersonalXp(state, {
+          recipientId: user,
+          eventType: "CHEER_SENT",
+          sourceType: "REACTION",
+          sourceId: reaction.id,
+          dateKey: today,
+          amount: XP_REWARDS.CHEER_SENT,
+          dedupeKey: `cheer:${user}:${goal.id}:${today}:${emoji}`,
+          metadata: { goalTitle: goal.title },
+        });
+        return { xpAwards: [award] };
       }
       return {};
     }
@@ -713,9 +816,26 @@ export function applyAction(state, body, user) {
     case "addMessage": {
       const text = str(body.text, 120);
       if (!text) return { error: "invalid message", status: 400 };
-      state.messages.push({ id: newId("m"), from: user, text, createdAt: new Date().toISOString() });
+      const replyToId = str(body.replyToId, 40);
+      const original = replyToId ? state.messages.find((message) => message.id === replyToId) : null;
+      if (replyToId && (!original || original.from === user)) {
+        return { error: "받은 한마디에만 답장할 수 있어요", status: 400 };
+      }
+      const message = { id: newId("m"), from: user, text, createdAt: new Date().toISOString() };
+      if (original) message.replyToId = original.id;
+      state.messages.push(message);
       state.messages = state.messages.slice(-50);
-      return {};
+      if (!original) return {};
+      const award = awardPersonalXp(state, {
+        recipientId: user,
+        eventType: "CHEER_REPLY",
+        sourceType: "MESSAGE",
+        sourceId: original.id,
+        dateKey: today,
+        amount: XP_REWARDS.CHEER_REPLY,
+        dedupeKey: `reply:${user}:${original.id}`,
+      });
+      return { xpAwards: [award] };
     }
 
     case "deleteMessage": {
@@ -730,9 +850,19 @@ export function applyAction(state, body, user) {
     case "poke": {
       const target = state.users.find((u) => u !== user);
       if (!target) return { error: "아직 친구가 안 들어왔어요", status: 400 };
-      state.pokes.push({ id: newId("k"), from: user, date: today, at: new Date().toISOString() });
+      const poke = { id: newId("k"), from: user, date: today, at: new Date().toISOString() };
+      state.pokes.push(poke);
       state.pokes = state.pokes.slice(-20);
-      return {};
+      const award = awardPersonalXp(state, {
+        recipientId: user,
+        eventType: "POKE_SENT",
+        sourceType: "POKE",
+        sourceId: poke.id,
+        dateKey: today,
+        amount: XP_REWARDS.CHEER_SENT,
+        dedupeKey: `poke:${user}:${poke.id}`,
+      });
+      return { xpAwards: [award] };
     }
 
     case "addExcuse": {
@@ -752,7 +882,18 @@ export function applyAction(state, body, user) {
       const existing = state.excuses.find((x) => x.goalId === goal.id && x.date === yesterday);
       if (existing) existing.text = text;
       else state.excuses.push({ id: newId("x"), goalId: goal.id, owner: user, date: yesterday, text });
-      return {};
+      if (existing) return {};
+      const award = awardPersonalXp(state, {
+        recipientId: user,
+        eventType: "FAILURE_REASON_RECORDED",
+        sourceType: "DAILY_GOAL",
+        sourceId: goal.id,
+        dateKey: yesterday,
+        amount: XP_REWARDS.FAILURE_REASON_RECORDED,
+        dedupeKey: `failure-reason:${user}:${goal.id}:${yesterday}`,
+        metadata: { goalTitle: goal.title },
+      });
+      return { xpAwards: [award] };
     }
 
     case "subscribePush": {
@@ -813,7 +954,13 @@ export function handlePost(rawState, body) {
   if (result.noop) return { status: 200, respond: sanitize(state) };
 
   compact(state);
-  return { status: 200, respond: sanitize(state), state, write: true };
+  const awards = (result.xpAwards || []).filter((award) => award?.awarded || award?.capped);
+  return {
+    status: 200,
+    respond: { ...sanitize(state), xpAwards: awards },
+    state,
+    write: true,
+  };
 }
 
 // 아침 응원: 오늘 찍어야 할 매일 목표 수

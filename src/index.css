@@ -3099,6 +3099,132 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
+.xp-toast {
+  white-space: pre-line;
+}
+
+.message-replying {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 7px 10px;
+  color: var(--ink-soft);
+  background: rgba(181, 50, 40, 0.07);
+  border-left: 3px solid var(--red);
+  font-size: 12px;
+}
+
+.message-replying button,
+.msg-reply {
+  border: 0;
+  background: transparent;
+  color: var(--red-deep);
+  cursor: pointer;
+  font: inherit;
+}
+
+.xp-ledger {
+  position: absolute;
+  z-index: 25;
+  top: 116px;
+  left: 18px;
+  width: min(360px, calc(100% - 36px));
+  padding: 18px;
+  color: #241f18;
+  background: #f8f2e2;
+  border: 1px solid #c9b98c;
+  box-shadow: 5px 7px 0 rgba(36, 31, 24, 0.14);
+  transform: rotate(-0.3deg);
+}
+
+.xp-ledger-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.xp-ledger-tabs {
+  display: flex;
+  gap: 6px;
+  padding-right: 24px;
+}
+
+.xp-ledger-tabs button {
+  padding: 7px 12px;
+  border: 1px solid #c9b98c;
+  background: #efe6cf;
+  cursor: pointer;
+}
+
+.xp-ledger-tabs button.active {
+  color: #fffaf0;
+  background: #8a3b32;
+  border-color: #8a3b32;
+}
+
+.xp-ledger ul {
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.xp-ledger li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 2px;
+  border-bottom: 1px dashed rgba(36, 31, 24, 0.18);
+  font-size: 13px;
+}
+
+.xp-ledger li strong {
+  color: #8a3b32;
+}
+
+.xp-ledger li.empty {
+  color: rgba(36, 31, 24, 0.62);
+}
+
+.hud-card {
+  text-align: left;
+}
+
+button.hud-card {
+  cursor: pointer;
+  font: inherit;
+}
+
+.hud-village .hud-xpfill {
+  background: #477a6d;
+}
+
+@media (max-width: 680px) {
+  .xp-ledger {
+    position: fixed;
+    top: auto;
+    bottom: 78px;
+    left: 12px;
+    width: calc(100% - 24px);
+    max-height: 52vh;
+    overflow: auto;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-toast,
+  .xp-ledger {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
 .history-cell.h1 {
   background: rgba(181, 50, 40, 0.22);
   color: var(--ink);

@@ -18,13 +18,14 @@ import LifeCompass from "./components/LifeCompass.jsx";
 import SeasonBoard from "./components/SeasonBoard.jsx";
 import ReflectionHub from "./components/ReflectionHub.jsx";
 import AIAdvisor from "./components/AIAdvisor.jsx";
+import { XP_EVENT_LABELS } from "../shared/xp-config.js";
 
 const API = "/api/state";
 const EMPTY_STATE = {
   users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [],
   pokes: [], excuses: [], goalMemos: [], bigGoals: [], lifeProfiles: [],
   lifeDomains: [], seasons: [], lifeItems: [], weeklyReviews: [],
-  monthlyReviews: [], decisions: [], archive: {},
+  monthlyReviews: [], decisions: [], xpEvents: [], xpVersion: 0, archive: {},
 };
 
 function pickState(data) {
@@ -46,6 +47,8 @@ function pickState(data) {
     weeklyReviews: data.weeklyReviews || [],
     monthlyReviews: data.monthlyReviews || [],
     decisions: data.decisions || [],
+    xpEvents: data.xpEvents || [],
+    xpVersion: data.xpVersion || 0,
     archive: data.archive || {},
   };
 }
@@ -75,6 +78,20 @@ export default function App() {
     setToast({ text, id: Date.now() });
     clearTimeout(toastTimerRef.current);
     toastTimerRef.current = setTimeout(() => setToast(null), 3500);
+  };
+
+  const showXpFeedback = (awards = []) => {
+    const earned = awards.filter((award) => award.awarded && award.event);
+    const capped = awards.some((award) => award.capped);
+    if (earned.length > 0) {
+      showToast(earned.map((award) => {
+        const label = XP_EVENT_LABELS[award.event.eventType] || "좋은 활동을 남겼어요";
+        const owner = award.event.recipientType === "VILLAGE" ? "우리 마을" : "개인";
+        return `${label}\n${owner} XP +${award.amount}`;
+      }).join("\n\n"));
+    } else if (capped) {
+      showToast("마음은 잘 전달했어요.\n오늘 받을 수 있는 응원 XP는 모두 모았어요.");
+    }
   };
 
   const logout = () => {
@@ -114,6 +131,7 @@ export default function App() {
         const data = await res.json();
         if (res.ok) {
           setState(pickState(data));
+          showXpFeedback(data.xpAwards || []);
           ok = true;
         } else if (data.error === "auth") {
           showToast("접속 인증이 풀렸어요 — 다시 들어와줘.");
@@ -440,8 +458,8 @@ export default function App() {
   const saveFailureReason = (goalId, text) =>
     mutate({ action: "addFailureReason", goalId, text });
 
-  const sendMessage = (text) =>
-    mutate({ action: "addMessage", text });
+  const sendMessage = (text, replyToId = "") =>
+    mutate({ action: "addMessage", text, replyToId });
 
   const addGoalMemo = (memo) =>
     mutate({ action: "addGoalMemo", memo });
@@ -511,8 +529,7 @@ export default function App() {
 
   const poke = async () => {
     vibrate(10);
-    const ok = await mutate({ action: "poke" });
-    if (ok) showToast(`👉 ${otherName}을(를) 콕 찔렀어요!`);
+    await mutate({ action: "poke" });
   };
 
   const cheerGoal = (goalId) => {

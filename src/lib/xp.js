@@ -1,22 +1,17 @@
-// 경험치 / 레벨
-// 서버에 따로 저장하지 않고 도장 기록에서 그대로 계산한다:
-// 도장 1개 = 10 XP, 기간 목표 진행 = 수량당 2 XP, 완주 보너스 30 XP
-// 컴팩션으로 지워진 옛 도장은 archive[user].stamps 집계로 XP가 유지된다.
-export function computeXP(user, state) {
-  const goals = state.goals.filter((g) => g.owner === user);
-  const ids = new Set(goals.map((g) => g.id));
-  const archived = state.archive?.[user]?.stamps || 0;
-  let xp = (archived + state.checkins.filter((c) => ids.has(c.goalId)).length) * 10;
-  for (const g of goals) {
-    if (g.type !== "milestone") continue;
-    const net = Math.max(
-      0,
-      state.progress.filter((p) => p.goalId === g.id).reduce((s, p) => s + p.amount, 0)
-    );
-    xp += Math.min(net, g.target) * 2;
-    if (net >= g.target) xp += 30;
-  }
-  return xp;
+import { VILLAGE_ID, VILLAGE_LEVEL_THRESHOLDS, XP_EVENT_LABELS } from "../../shared/xp-config.js";
+
+export function personalXp(user, state) {
+  return (state.xpEvents || []).filter((event) =>
+    event.recipientType === "USER" && event.recipientId === user
+  ).reduce((sum, event) => sum + event.xpAmount, 0);
+}
+
+export const computeXP = personalXp;
+
+export function villageXp(state) {
+  return (state.xpEvents || []).filter((event) =>
+    event.recipientType === "VILLAGE" && event.recipientId === VILLAGE_ID
+  ).reduce((sum, event) => sum + event.xpAmount, 0);
 }
 
 export function xpForLevel(level) {
@@ -29,9 +24,45 @@ export function levelOf(xp) {
   return level;
 }
 
+function villageThreshold(level) {
+  const index = Math.max(0, level - 1);
+  if (index < VILLAGE_LEVEL_THRESHOLDS.length) return VILLAGE_LEVEL_THRESHOLDS[index];
+  const extra = index - VILLAGE_LEVEL_THRESHOLDS.length + 1;
+  return VILLAGE_LEVEL_THRESHOLDS.at(-1) + extra * (120 + extra * 20);
+}
+
+export function villageLevelOf(xp) {
+  let level = 1;
+  while (xp >= villageThreshold(level + 1)) level++;
+  return level;
+}
+
+export function userXpSummary(user, state) {
+  const xp = personalXp(user, state);
+  const level = levelOf(xp);
+  const base = xpForLevel(level);
+  const next = xpForLevel(level + 1);
+  return { xp, level, base, next, intoLevel: xp - base, needed: next - base, remaining: next - xp };
+}
+
+export function villageXpSummary(state) {
+  const xp = villageXp(state);
+  const level = villageLevelOf(xp);
+  const base = villageThreshold(level);
+  const next = villageThreshold(level + 1);
+  return { xp, level, base, next, intoLevel: xp - base, needed: next - base, remaining: next - xp };
+}
+
+export function recentXpEvents(state, recipientType, recipientId, limit = 8) {
+  return (state.xpEvents || []).filter((event) =>
+    event.recipientType === recipientType && event.recipientId === recipientId
+  ).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, limit)
+    .map((event) => ({ ...event, label: XP_EVENT_LABELS[event.eventType] || event.eventType }));
+}
+
 const UNLOCKS = [
   [2, "새싹 머리띠"],
-  [3, "밀짚모자"],
+  [3, "반짝 스카프"],
   [5, "목도리"],
   [7, "망토"],
   [10, "왕관"],
