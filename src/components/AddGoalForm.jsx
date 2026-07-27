@@ -6,8 +6,8 @@ import { LIFE_DOMAINS } from "../lib/life.js";
 const ICONS = ["🏃", "💧", "📖", "🧘", "🛌", "💪", "🥗", "✍️", "🎯", "🌱"];
 const GOAL_TYPE_LABEL = { daily: "매일", milestone: "기간 목표" };
 
-export default function AddGoalForm({ onAdd, onCancel, activeSeason }) {
-  const [title, setTitle] = useState("");
+export default function AddGoalForm({ onAdd, onCancel, activeSeason, initialTitle = "" }) {
+  const [title, setTitle] = useState(initialTitle);
   const [icon, setIcon] = useState(ICONS[0]);
   const [type, setType] = useState("daily");
   const [target, setTarget] = useState("");

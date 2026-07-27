@@ -59,6 +59,7 @@ export default function App() {
   const [state, setState] = useState(EMPTY_STATE);
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [goalDraftMemo, setGoalDraftMemo] = useState(null);
   const [dismissedReminder, setDismissedReminder] = useState(false);
   const [dismissedPokeId, setDismissedPokeId] = useState(null);
   const [pushKey, setPushKey] = useState(null);
@@ -377,7 +378,13 @@ export default function App() {
 
   const addGoal = async (goal) => {
     const ok = await mutate({ action: "addGoal", goal });
-    if (ok) setAdding(false);
+    if (ok) {
+      setAdding(false);
+      if (goalDraftMemo) {
+        await mutate({ action: "deleteGoalMemo", memoId: goalDraftMemo.id });
+        setGoalDraftMemo(null);
+      }
+    }
     return ok;
   };
 
@@ -506,6 +513,42 @@ export default function App() {
     vibrate(10);
     const ok = await mutate({ action: "poke" });
     if (ok) showToast(`👉 ${otherName}을(를) 콕 찔렀어요!`);
+  };
+
+  const cheerGoal = (goalId) => {
+    const alreadySent = state.reactions.some(
+      (item) => item.goalId === goalId && item.by === me && item.date === todayStr(0)
+    );
+    if (alreadySent) {
+      showToast("오늘 이미 응원을 보냈어요.");
+      return;
+    }
+    toggleReaction(goalId, "🔥");
+    showToast("🔥 응원을 보냈어요.");
+  };
+
+  const villageNavigate = (destination, target = "") => {
+    if (destination === "reflection") {
+      setDesignTab("reflection");
+      setView("design");
+      return;
+    }
+    setView(destination);
+    if (destination !== "board" || !target) return;
+    const ids = {
+      top: "board-top",
+      mine: "my-goals",
+      friend: "friend-goals",
+      memos: "goal-memos",
+      messages: "message-board",
+    };
+    window.setTimeout(() => document.getElementById(ids[target])?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
+
+  const startGoalFromMemo = (memo) => {
+    setGoalDraftMemo(memo);
+    setAdding(true);
+    villageNavigate("board", "mine");
   };
 
   const saveExcuse = (goalId, text) => {
@@ -759,7 +802,21 @@ export default function App() {
         </div>
       )}
 
-      {view === "village" && <Village state={state} me={me} otherName={otherName} />}
+      {view === "village" && (
+        <Village
+          state={state}
+          me={me}
+          otherName={otherName}
+          onNavigate={villageNavigate}
+          onPoke={poke}
+          onCheer={cheerGoal}
+          onAddProgress={addProgress}
+          onSendMessage={sendMessage}
+          onStartMemo={startGoalFromMemo}
+          onEditMemo={() => villageNavigate("board", "memos")}
+          onDeleteMemo={deleteGoalMemo}
+        />
+      )}
 
       {view === "history" && (
         <HistoryView
@@ -774,7 +831,7 @@ export default function App() {
 
       {view === "board" && (
         <>
-          <section className="board-head">
+          <section className="board-head" id="board-top">
             <div className="board-head-top">
               <div>
                 <p className="eyebrow">오늘의 도장판</p>
@@ -861,7 +918,7 @@ export default function App() {
           {otherName && <WeekSummary summary={weeklySummary} />}
 
           <div className="columns">
-            <section className="goal-column">
+            <section className="goal-column" id="my-goals">
               <div className="column-head">
                 <h3>내 목표</h3>
                 <span className="tag">
@@ -880,8 +937,12 @@ export default function App() {
                 {adding ? (
                   <AddGoalForm
                     onAdd={addGoal}
-                    onCancel={() => setAdding(false)}
+                    onCancel={() => {
+                      setAdding(false);
+                      setGoalDraftMemo(null);
+                    }}
                     activeSeason={myActiveSeason}
+                    initialTitle={goalDraftMemo?.text || ""}
                   />
                 ) : (
                   <div className="add-action-row">
@@ -890,16 +951,18 @@ export default function App() {
                     </button>
                   </div>
                 )}
-                <GoalMemoPanel
-                  memos={myGoalMemos}
-                  onAdd={addGoalMemo}
-                  onUpdate={updateGoalMemo}
-                  onDelete={deleteGoalMemo}
-                />
+                <div id="goal-memos">
+                  <GoalMemoPanel
+                    memos={myGoalMemos}
+                    onAdd={addGoalMemo}
+                    onUpdate={updateGoalMemo}
+                    onDelete={deleteGoalMemo}
+                  />
+                </div>
               </div>
             </section>
 
-            <section className="goal-column friend-column">
+            <section className="goal-column friend-column" id="friend-goals">
               <div className="column-head">
                 <h3>{otherName || "친구"} 목표</h3>
                 <div className="column-head-right">
@@ -924,13 +987,15 @@ export default function App() {
             </section>
           </div>
 
-          <MessageBoard
-            messages={state.messages}
-            me={me}
-            otherName={otherName}
-            onSend={sendMessage}
-            onDelete={deleteMessage}
-          />
+          <div id="message-board">
+            <MessageBoard
+              messages={state.messages}
+              me={me}
+              otherName={otherName}
+              onSend={sendMessage}
+              onDelete={deleteMessage}
+            />
+          </div>
 
           <div className="footer-note">
             오늘·어제 칸 체크 가능 · 못 찍은 날엔 이유 남기기 · 친구 도장엔 리액션·응원·콕 찌르기

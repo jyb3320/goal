@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { computeXP, xpForLevel, levelOf, nextUnlock } from "./lib/xp.js";
+import { buildVillageStatus } from "./lib/village.js";
+import VillagePanel from "./components/VillagePanel.jsx";
 
 // ---------- 월드 상수 ----------
 const WORLD_W = 1400;
@@ -7,6 +9,10 @@ const WORLD_H = 1000;
 const HOUSE_ME = { x: 320, y: 300 };
 const HOUSE_FR = { x: 1080, y: 300 };
 const POND = { x: 700, y: 680, rx: 150, ry: 90 };
+const BOARD = { x: 700, y: 335 };
+const MAILBOX = { x: 500, y: 455 };
+const GARDEN = { x: 255, y: 620 };
+const ARCHIVE = { x: 1110, y: 650 };
 const MAX_DECOR = 400;
 
 const C = {
@@ -41,7 +47,10 @@ function insideExclusion(x, y) {
   const nearHouse = (h) => Math.abs(x - h.x) < 120 && Math.abs(y - h.y) < 110;
   const inPond =
     ((x - POND.x) / (POND.rx + 40)) ** 2 + ((y - POND.y) / (POND.ry + 40)) ** 2 < 1;
-  return nearHouse(HOUSE_ME) || nearHouse(HOUSE_FR) || inPond;
+  const nearPlace = [BOARD, MAILBOX, GARDEN, ARCHIVE].some(
+    (place) => Math.abs(x - place.x) < 110 && Math.abs(y - place.y) < 90
+  );
+  return nearHouse(HOUSE_ME) || nearHouse(HOUSE_FR) || inPond || nearPlace;
 }
 
 function decorFor(i) {
@@ -64,8 +73,51 @@ function easeOutBack(t) {
   return 1 + (c + 1) * u * u * u + c * u * u;
 }
 
-export default function Village({ state, me, otherName }) {
+export default function Village({
+  state,
+  me,
+  otherName,
+  onNavigate,
+  onPoke,
+  onCheer,
+  onAddProgress,
+  onSendMessage,
+  onStartMemo,
+  onEditMemo,
+  onDeleteMemo,
+}) {
   const canvasRef = useRef(null);
+  const [location, setLocation] = useState(null);
+  const villageStatus = useMemo(() => buildVillageStatus(state, me, otherName), [state, me, otherName]);
+  const readKey = `goal-village-mail-read:${me}`;
+  const [readEventKeys, setReadEventKeys] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(readKey) || "[]");
+      return Array.isArray(saved) ? saved : [];
+    } catch {
+      return [];
+    }
+  });
+  const readEventSet = useMemo(() => new Set(readEventKeys), [readEventKeys]);
+  const unread = villageStatus.mailbox.events.filter((event) => !readEventSet.has(event.key)).length;
+  const openLocation = useCallback((next) => {
+    setLocation(next);
+    if (next === "mailbox") {
+      const keys = villageStatus.mailbox.events.slice(0, 100).map((event) => event.key);
+      setReadEventKeys(keys);
+      try {
+        localStorage.setItem(readKey, JSON.stringify(keys));
+      } catch {
+        // 브라우저 저장소를 막아둔 경우 이번 화면에서만 읽음 처리한다.
+      }
+    }
+  }, [readKey, villageStatus.mailbox.events]);
+  const openLocationRef = useRef(openLocation);
+  openLocationRef.current = openLocation;
+  const villageStatusRef = useRef(villageStatus);
+  villageStatusRef.current = villageStatus;
+  const unreadRef = useRef(unread);
+  unreadRef.current = unread;
   const stateRef = useRef(state);
   stateRef.current = state;
   const otherRef = useRef(otherName);
@@ -131,7 +183,7 @@ export default function Village({ state, me, otherName }) {
       phase: 0,
       moving: false,
     };
-    const pointer = { active: false, x: 0, y: 0 };
+    const pointer = { active: false, x: 0, y: 0, sx: 0, sy: 0, moved: false };
     const particles = [];
     const spawnTimes = new Map(); // 새 장식 pop 애니메이션
     let decors = [];
@@ -177,20 +229,44 @@ export default function Village({ state, me, otherName }) {
       const r = canvas.getBoundingClientRect();
       return { x: e.clientX - r.left + cam.x, y: e.clientY - r.top + cam.y };
     };
+    const locationAt = (p) => {
+      if (Math.abs(p.x - HOUSE_ME.x) < 78 && Math.abs(p.y - HOUSE_ME.y) < 90) return "meHouse";
+      if (Math.abs(p.x - HOUSE_FR.x) < 78 && Math.abs(p.y - HOUSE_FR.y) < 90) return "friendHouse";
+      if (Math.abs(p.x - BOARD.x) < 82 && Math.abs(p.y - BOARD.y) < 72) return "board";
+      if (Math.abs(p.x - MAILBOX.x) < 54 && Math.abs(p.y - MAILBOX.y) < 58) return "mailbox";
+      if (Math.abs(p.x - GARDEN.x) < 100 && Math.abs(p.y - GARDEN.y) < 70) return "garden";
+      if (Math.abs(p.x - ARCHIVE.x) < 92 && Math.abs(p.y - ARCHIVE.y) < 82) return "archive";
+      if (((p.x - POND.x) / (POND.rx + 30)) ** 2 + ((p.y - POND.y) / (POND.ry + 30)) ** 2 < 1) return "square";
+      return null;
+    };
     const onPointerDown = (e) => {
       canvas.setPointerCapture(e.pointerId);
       pointer.active = true;
       const p = toWorld(e);
       pointer.x = p.x;
       pointer.y = p.y;
+      pointer.sx = e.clientX;
+      pointer.sy = e.clientY;
+      pointer.moved = false;
     };
     const onPointerMove = (e) => {
-      if (!pointer.active) return;
       const p = toWorld(e);
+      if (!pointer.active) {
+        canvas.style.cursor = locationAt(p) ? "pointer" : "grab";
+        return;
+      }
       pointer.x = p.x;
       pointer.y = p.y;
+      if (Math.hypot(e.clientX - pointer.sx, e.clientY - pointer.sy) > 8) pointer.moved = true;
     };
-    const onPointerUp = () => (pointer.active = false);
+    const onPointerUp = (e) => {
+      const p = toWorld(e);
+      pointer.active = false;
+      if (!pointer.moved) {
+        const selected = locationAt(p);
+        if (selected) openLocationRef.current(selected);
+      }
+    };
     canvas.addEventListener("pointerdown", onPointerDown);
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", onPointerUp);
@@ -419,7 +495,7 @@ export default function Village({ state, me, otherName }) {
       ctx.restore();
     }
 
-    function drawHouse(h, roofCol, level, label) {
+    function drawHouse(h, roofCol, level, label, activity) {
       const big = level >= 6 ? 1.15 : 1;
       ctx.save();
       ctx.translate(h.x, h.y);
@@ -447,12 +523,34 @@ export default function Village({ state, me, otherName }) {
       ctx.beginPath();
       ctx.arc(6, 31, 1.8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#cfe3dd";
+      ctx.fillStyle = activity?.activeToday ? "#f2c96d" : "#cfe3dd";
+      if (activity?.activeToday) {
+        ctx.shadowColor = "rgba(242, 201, 109, 0.85)";
+        ctx.shadowBlur = 13;
+      }
       ctx.strokeStyle = "#8a6a3d";
       ctx.fillRect(-34, 2, 16, 14);
       ctx.strokeRect(-34, 2, 16, 14);
       ctx.fillRect(18, 2, 16, 14);
       ctx.strokeRect(18, 2, 16, 14);
+      ctx.shadowBlur = 0;
+      if (activity?.allDoneToday) {
+        ctx.save();
+        ctx.translate(35, -34);
+        ctx.rotate(-0.1);
+        ctx.fillStyle = C.paper;
+        ctx.strokeStyle = C.red;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = C.redDeep;
+        ctx.font = 'bold 11px "Noto Sans KR", sans-serif';
+        ctx.textAlign = "center";
+        ctx.fillText("完", 0, 4);
+        ctx.restore();
+      }
       if (level >= 3) {
         ctx.fillStyle = "#8a6a3d";
         ctx.fillRect(20, -46, 10, 20);
@@ -477,6 +575,210 @@ export default function Village({ state, me, otherName }) {
       ctx.textAlign = "center";
       ctx.fillText(label, 0, 60);
       ctx.restore();
+    }
+
+    function drawBoard() {
+      const milestones = villageStatusRef.current.activeMilestones.length;
+      ctx.save();
+      ctx.translate(BOARD.x, BOARD.y);
+      ctx.fillStyle = "rgba(36,31,24,0.12)";
+      ctx.beginPath();
+      ctx.ellipse(0, 48, 62, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#7f6038";
+      ctx.fillRect(-52, -38, 7, 85);
+      ctx.fillRect(45, -38, 7, 85);
+      ctx.fillStyle = "#9a7442";
+      ctx.strokeStyle = "#654b2e";
+      ctx.lineWidth = 3;
+      ctx.fillRect(-68, -48, 136, 70);
+      ctx.strokeRect(-68, -48, 136, 70);
+      ctx.fillStyle = C.paper;
+      for (let i = 0; i < Math.min(3, Math.max(1, milestones)); i++) {
+        const x = -53 + i * 39;
+        ctx.save();
+        ctx.translate(x, -35 + (i % 2) * 5);
+        ctx.rotate((i - 1) * 0.04);
+        ctx.fillRect(0, 0, 34, 42);
+        ctx.fillStyle = i === 0 ? C.red : C.teal;
+        ctx.fillRect(5, 8, 24, 3);
+        ctx.fillStyle = "#a6997b";
+        ctx.fillRect(5, 17, 20, 2);
+        ctx.fillRect(5, 23, 16, 2);
+        ctx.restore();
+        ctx.fillStyle = C.paper;
+      }
+      if (villageStatusRef.current.completedMilestones > 0) {
+        ctx.fillStyle = C.red;
+        ctx.fillRect(54, -60, 22, 10);
+        ctx.beginPath();
+        ctx.moveTo(54, -50);
+        ctx.lineTo(65, -42);
+        ctx.lineTo(76, -50);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = C.ink;
+      ctx.font = 'bold 12px "Noto Sans KR", sans-serif';
+      ctx.textAlign = "center";
+      ctx.fillText("마을 게시판", 0, 38);
+      ctx.restore();
+    }
+
+    function drawMailbox(t) {
+      const count = unreadRef.current;
+      ctx.save();
+      ctx.translate(MAILBOX.x, MAILBOX.y);
+      ctx.fillStyle = "rgba(36,31,24,0.12)";
+      ctx.beginPath();
+      ctx.ellipse(0, 34, 30, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#755434";
+      ctx.fillRect(-3, 2, 6, 33);
+      ctx.fillStyle = count > 0 ? C.red : "#9a7442";
+      ctx.strokeStyle = C.redDeep;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-23, -23, 46, 31, 9);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#633f27";
+      ctx.fillRect(13, -14, 10, 4);
+      if (count > 0) {
+        const lift = Math.sin(t * 5) * 1.5;
+        ctx.fillStyle = C.paper;
+        ctx.fillRect(-13, -31 - lift, 26, 16);
+        ctx.strokeRect(-13, -31 - lift, 26, 16);
+        ctx.strokeStyle = "#b9a982";
+        ctx.beginPath();
+        ctx.moveTo(-13, -31 - lift);
+        ctx.lineTo(0, -21 - lift);
+        ctx.lineTo(13, -31 - lift);
+        ctx.stroke();
+        ctx.fillStyle = C.gold;
+        ctx.fillRect(25, -35, 3, 28);
+        ctx.fillStyle = C.red;
+        ctx.beginPath();
+        ctx.moveTo(28, -35);
+        ctx.lineTo(45, -30);
+        ctx.lineTo(28, -25);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawGarden() {
+      const stage = villageStatusRef.current.seedStage;
+      ctx.save();
+      ctx.translate(GARDEN.x, GARDEN.y);
+      ctx.fillStyle = "#987044";
+      ctx.strokeStyle = "#6f5032";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(-78, -24, 156, 56, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#6d5434";
+      ctx.beginPath();
+      ctx.roundRect(-69, -15, 138, 38, 8);
+      ctx.fill();
+      const sprouts = stage === 0 ? 0 : stage === 1 ? 2 : 5;
+      for (let i = 0; i < sprouts; i++) {
+        const x = -48 + i * 24;
+        ctx.strokeStyle = C.greenDeep;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x, 10);
+        ctx.lineTo(x, -8 - (i % 2) * 5);
+        ctx.stroke();
+        ctx.fillStyle = C.green;
+        ctx.beginPath();
+        ctx.ellipse(x - 5, -8, 7, 4, -0.5, 0, Math.PI * 2);
+        ctx.ellipse(x + 5, -11, 7, 4, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = C.paper;
+      ctx.strokeStyle = "#6f5032";
+      ctx.fillRect(82, -13, 46, 24);
+      ctx.strokeRect(82, -13, 46, 24);
+      ctx.fillStyle = C.ink;
+      ctx.font = '10px "Noto Sans KR", sans-serif';
+      ctx.textAlign = "center";
+      ctx.fillText("목표 씨앗", 105, 3);
+      ctx.restore();
+    }
+
+    function drawArchive() {
+      const stage = villageStatusRef.current.archive.bookStage;
+      const openBook = villageStatusRef.current.archive.hasWeeklyReview;
+      ctx.save();
+      ctx.translate(ARCHIVE.x, ARCHIVE.y);
+      ctx.fillStyle = "rgba(36,31,24,0.12)";
+      ctx.beginPath();
+      ctx.ellipse(0, 48, 64, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#efe4ca";
+      ctx.strokeStyle = "#9c8257";
+      ctx.lineWidth = 2;
+      ctx.fillRect(-54, -33, 108, 80);
+      ctx.strokeRect(-54, -33, 108, 80);
+      ctx.fillStyle = "#766041";
+      ctx.fillRect(-42, -20, 84, 4);
+      ctx.fillRect(-42, 10, 84, 4);
+      const books = stage === 0 ? 0 : stage === 1 ? 4 : 8;
+      const colors = [C.red, C.teal, C.goldDeep, "#735c87"];
+      for (let i = 0; i < books; i++) {
+        const shelfY = i < 4 ? -17 : 13;
+        const x = -37 + (i % 4) * 18;
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.fillRect(x, shelfY - 19, 12, 19);
+      }
+      if (openBook) {
+        ctx.fillStyle = C.paper;
+        ctx.beginPath();
+        ctx.moveTo(-22, -45);
+        ctx.quadraticCurveTo(-8, -52, 0, -43);
+        ctx.quadraticCurveTo(8, -52, 22, -45);
+        ctx.lineTo(20, -31);
+        ctx.quadraticCurveTo(8, -37, 0, -30);
+        ctx.quadraticCurveTo(-8, -37, -20, -31);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = C.ink;
+      ctx.font = 'bold 11px "Noto Sans KR", sans-serif';
+      ctx.textAlign = "center";
+      ctx.fillText("기록관", 0, 62);
+      ctx.restore();
+    }
+
+    function drawSquareDetails(t) {
+      const status = villageStatusRef.current;
+      if (status.sharedThisWeek >= 5) {
+        for (const [x, y] of [[POND.x - 55, POND.y - 15], [POND.x + 45, POND.y + 24]]) {
+          ctx.fillStyle = "#708e55";
+          ctx.beginPath();
+          ctx.ellipse(x, y, 17, 8, 0.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#c88387";
+          ctx.beginPath();
+          ctx.arc(x, y - 5, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      if (status.bothActiveDays >= 3) {
+        ctx.fillStyle = C.ink;
+        ctx.fillRect(POND.x - 208, POND.y - 58, 5, 48);
+        ctx.fillRect(POND.x + 203, POND.y - 58, 5, 48);
+        const glow = status.bothActiveToday ? 0.75 + Math.sin(t * 3) * 0.12 : 0;
+        for (const x of [POND.x - 206, POND.x + 206]) {
+          ctx.fillStyle = status.bothActiveToday ? `rgba(242,201,109,${glow})` : "#b7aa8e";
+          ctx.beginPath();
+          ctx.arc(x, POND.y - 62, 9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
 
     function drawChar(ch, bodyCol, level, name, t, bubble) {
@@ -689,6 +991,11 @@ export default function Village({ state, me, otherName }) {
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
+      drawSquareDetails(t);
+      drawBoard();
+      drawMailbox(t);
+      drawGarden();
+      drawArchive();
 
       // y 정렬해서 장식/집/캐릭터 그리기
       const items = [];
@@ -710,13 +1017,14 @@ export default function Village({ state, me, otherName }) {
           else if (d.kind === "grass") drawGrass(d.x, d.y, s);
           else drawFlower(d.x, d.y, d.v, s);
         } else if (it.kind === "houseMe") {
-          drawHouse(HOUSE_ME, C.red, myLevelRef.current, `${meName} 집`);
+          drawHouse(HOUSE_ME, C.red, myLevelRef.current, `${meName} 집`, villageStatusRef.current.mine);
         } else if (it.kind === "houseFr") {
           drawHouse(
             HOUSE_FR,
             C.teal,
             frLevelRef.current,
-            otherRef.current ? `${otherRef.current} 집` : "친구 기다리는 중…"
+            otherRef.current ? `${otherRef.current} 집` : "친구 기다리는 중…",
+            villageStatusRef.current.friend
           );
         } else if (it.kind === "player") {
           drawChar(player, C.red, myLevelRef.current, meName, t, playerBubble);
@@ -809,9 +1117,48 @@ export default function Village({ state, me, otherName }) {
           </div>
         )}
       </div>
-      <div className="village-hint">
-        방향키·WASD 또는 드래그로 이동 · 도장 1개 = 10 XP = 마을에 식물 하나 🌱 (지금 {decorCount}개)
+      <div className="village-place-dock" aria-label="마을 장소">
+        {[
+          ["meHouse", "🏠", "내 집"],
+          ["friendHouse", "🏡", otherName ? `${otherName} 집` : "친구 집"],
+          ["board", "📌", "게시판"],
+          ["mailbox", unread > 0 ? "💌" : "📭", "우체통"],
+          ["garden", villageStatus.seedStage > 0 ? "🌱" : "🪴", "목표 씨앗"],
+          ["square", villageStatus.bothActiveToday ? "🏮" : "🪷", "연못 광장"],
+          ["archive", villageStatus.archive.bookStage > 0 ? "📚" : "🏛️", "기록관"],
+        ].map(([key, icon, label]) => (
+          <button
+            key={key}
+            type="button"
+            className={location === key ? "selected" : ""}
+            onClick={() => openLocation(key)}
+            aria-label={`${label} 열기`}
+          >
+            <span aria-hidden="true">{icon}</span>
+            <small>{label}</small>
+            {key === "mailbox" && unread > 0 && <b>{Math.min(9, unread)}{unread > 9 ? "+" : ""}</b>}
+          </button>
+        ))}
       </div>
+      <div className="village-hint">
+        장소를 누르면 오늘의 상태를 먼저 볼 수 있어요 · 방향키·WASD 또는 드래그로 산책
+      </div>
+      <VillagePanel
+        location={location}
+        status={villageStatus}
+        me={me}
+        otherName={otherName}
+        unread={unread}
+        onClose={() => setLocation(null)}
+        onNavigate={onNavigate}
+        onPoke={onPoke}
+        onCheer={onCheer}
+        onAddProgress={onAddProgress}
+        onSendMessage={onSendMessage}
+        onStartMemo={onStartMemo}
+        onEditMemo={onEditMemo}
+        onDeleteMemo={onDeleteMemo}
+      />
     </div>
   );
 }
