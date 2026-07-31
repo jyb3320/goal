@@ -635,3 +635,63 @@ describe("리마인더 카운트", () => {
     expect(r.respond.goals[0].targetPerWeek).toBeUndefined();
   });
 });
+
+describe("목표 구조 v2", () => {
+  it("시즌 핵심 행동의 요일 표현을 자동 루틴 일정으로 옮긴다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const result = b.post({
+      action: "setSeason", name: "햄",
+      season: {
+        title: "채용 신호 12주",
+        desiredResults: "콘텐츠 24개",
+        coreActions: "화·금 콘텐츠 발행",
+        autoCreate: { routine: true },
+      },
+    }).respond;
+    const routine = result.goals.find((goal) => goal.title === "화·금 콘텐츠 발행");
+    expect(routine.repeatType).toBe("weekdays");
+    expect(routine.repeatDays).toEqual([2, 5]);
+  });
+
+  it("마감일과 반복 설정을 생성·수정 후 유지한다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const created = b.post({
+      action: "addGoal", name: "햄",
+      goal: { title: "콘텐츠 발행", kind: "routine", repeatType: "weekdays", repeatDays: [2, 5], deadline: "2026-08-05" },
+    }).respond.goals[0];
+    expect(created.deadline).toBe("2026-08-05");
+    expect(created.repeatDays).toEqual([2, 5]);
+    const updated = b.post({
+      action: "updateGoal", name: "햄", goalId: created.id,
+      goal: { ...created, deadline: "2026-08-12", repeatType: "weekly", repeatCount: 2 },
+    }).respond.goals[0];
+    expect(updated.deadline).toBe("2026-08-12");
+    expect(updated.repeatType).toBe("weekly");
+    expect(updated.repeatCount).toBe(2);
+  });
+
+  it("시즌 루틴은 lifeItem과 실제 도장 목표를 하나의 goalId로 연결한다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const season = b.post({ action: "setSeason", name: "햄", season: { title: "채용 신호 12주", desiredResults: "콘텐츠 24개" } }).respond.seasons[0];
+    const result = b.post({
+      action: "addLifeItem", name: "햄",
+      item: { title: "화·금 발행", kind: "routine", seasonId: season.id, repeatType: "weekdays", repeatDays: [2, 5], showOnBoard: true },
+    }).respond;
+    expect(result.lifeItems[0].goalId).toBe(result.goals[0].id);
+    expect(result.goals[0].seasonId).toBe(season.id);
+  });
+
+  it("프로젝트 하위 작업 완료 상태를 저장한다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    const goal = b.post({
+      action: "addGoal", name: "햄",
+      goal: { title: "포트폴리오", kind: "project", subtasks: [{ title: "프로필 작성" }, { title: "링크 연결" }] },
+    }).respond.goals[0];
+    const result = b.post({ action: "toggleSubtask", name: "햄", goalId: goal.id, taskId: goal.subtasks[0].id, done: true });
+    expect(result.respond.goals[0].subtasks[0].done).toBe(true);
+  });
+});

@@ -3,6 +3,8 @@ import { ddayLabel, todayStr } from "../lib/dates.js";
 import { burst, bigBurst, stampSound, fanfareSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
 import { domainOf } from "../lib/life.js";
+import { formatDeadline } from "../lib/goals.js";
+import GoalMenu from "./GoalMenu.jsx";
 
 export default function MilestoneGoalCard({
   goal,
@@ -15,6 +17,8 @@ export default function MilestoneGoalCard({
   onSaveFailureReason,
   onToggleReaction,
   onDelete,
+  onEdit,
+  onAction,
 }) {
   const [amount, setAmountRaw] = useState(1);
   const [reasonOpen, setReasonOpen] = useState(false);
@@ -69,10 +73,14 @@ export default function MilestoneGoalCard({
           <span className="type-tag">기간 목표</span>
           {goal.domainKey && <span className="life-domain-tag">{domainOf(goal.domainKey)?.label}</span>}
         </div>
-        <div className={`streak-badge ${done ? "done" : ""}`}>
-          {done ? "달성! 🎉" : expired ? "실패 이유 필요" : dday || "기한 없음"}
+        <div className="goal-top-actions">
+          <div className={`streak-badge ${done ? "done" : ""}`}>
+            {done ? "달성! 🎉" : expired ? "마감 지남" : dday || "기한 없음"}
+          </div>
+          {isMine && <GoalMenu goal={goal} onEdit={onEdit} onAction={onAction} onDelete={onDelete} />}
         </div>
       </div>
+      <div className="goal-schedule-line">{formatDeadline(goal.deadline)}{dday ? ` · ${dday}` : ""}</div>
       {season && (
         <div className="goal-thread" title={`이 목표가 12주 시즌 '${season.title}'에 쌓여요`}>
           <span className="thread-line" aria-hidden="true" />
@@ -117,11 +125,6 @@ export default function MilestoneGoalCard({
           {isMine && expired && (
             <button className="failure-trigger" onClick={() => setReasonOpen((v) => !v)} type="button">
               실패 이유 기록
-            </button>
-          )}
-          {isMine && (
-            <button className="delete-goal" onClick={() => onDelete(goal)} type="button">
-              삭제
             </button>
           )}
         </div>

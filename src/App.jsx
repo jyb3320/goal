@@ -18,6 +18,10 @@ import LifeCompass from "./components/LifeCompass.jsx";
 import SeasonBoard from "./components/SeasonBoard.jsx";
 import ReflectionHub from "./components/ReflectionHub.jsx";
 import AIAdvisor from "./components/AIAdvisor.jsx";
+import WeekView from "./components/WeekView.jsx";
+import ProjectGoalCard from "./components/ProjectGoalCard.jsx";
+import PhotoDuo from "./components/PhotoDuo.jsx";
+import { goalKind, isGoalDueOn } from "./lib/goals.js";
 import { XP_EVENT_LABELS } from "../shared/xp-config.js";
 
 const API = "/api/state";
@@ -26,6 +30,7 @@ const EMPTY_STATE = {
   pokes: [], excuses: [], goalMemos: [], bigGoals: [], lifeProfiles: [],
   lifeDomains: [], seasons: [], lifeItems: [], weeklyReviews: [],
   monthlyReviews: [], decisions: [], xpEvents: [], xpVersion: 0, archive: {},
+  kpis: [],
 };
 
 function pickState(data) {
@@ -47,6 +52,7 @@ function pickState(data) {
     weeklyReviews: data.weeklyReviews || [],
     monthlyReviews: data.monthlyReviews || [],
     decisions: data.decisions || [],
+    kpis: data.kpis || [],
     xpEvents: data.xpEvents || [],
     xpVersion: data.xpVersion || 0,
     archive: data.archive || {},
@@ -55,13 +61,14 @@ function pickState(data) {
 
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
-  const [view, setView] = useState("board"); // 'board' | 'design' | 'history' | 'village'
+  const [view, setView] = useState("board"); // board | week | design | history | village
   const [designTab, setDesignTab] = useState("compass"); // 설계실 내부: compass | season | reflection | advisor
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [editingGoal, setEditingGoal] = useState(null);
   const [goalDraftMemo, setGoalDraftMemo] = useState(null);
   const [dismissedReminder, setDismissedReminder] = useState(false);
   const [dismissedPokeId, setDismissedPokeId] = useState(null);
@@ -249,11 +256,19 @@ export default function App() {
     [state.users, me]
   );
 
-  const visibleGoal = (g) => g.type !== "weekly" && g.status !== "failed";
+  const visibleGoal = (g) => g.type !== "weekly" && g.status !== "failed" && g.status !== "paused";
   const myGoals = state.goals.filter((g) => g.owner === me && visibleGoal(g));
   const otherGoals = otherName ? state.goals.filter((g) => g.owner === otherName && visibleGoal(g)) : [];
   const myGoalMemos = state.goalMemos.filter((m) => m.owner === me);
   const myActiveSeason = state.seasons.find((season) => season.owner === me && season.status === "active") || null;
+  const today = todayStr(0);
+  const todayGoals = myGoals.filter((goal) =>
+    goal.showOnBoard !== false &&
+    goal.status !== "completed" &&
+    goalKind(goal) !== "milestone" &&
+    (goal.scheduledDate === today || isGoalDueOn(goal, today))
+  );
+  const activeMilestones = myGoals.filter((goal) => goalKind(goal) === "milestone" && goal.status !== "failed");
 
   const progressSum = useMemo(() => {
     const map = {};
@@ -284,7 +299,7 @@ export default function App() {
           continue;
         }
         if (g.type !== "daily") continue;
-        const active = elapsed.filter((d) => d >= weekStart && (!g.createdAt || d >= g.createdAt));
+        const active = elapsed.filter((d) => d >= weekStart && (!g.createdAt || d >= g.createdAt) && isGoalDueOn(g, d));
         if (active.length === 0) continue;
         total++;
         if (active.some((d) => checkinSet.has(`${g.id}_${d}`))) completed++;
@@ -307,13 +322,10 @@ export default function App() {
   const reminder = useMemo(() => {
     if (new Date(clock).getHours() < 21) return null;
     const today = todayStr(0);
-    const missed = myGoals.filter((g) => {
-      if (g.type === "milestone" || checkinSet.has(`${g.id}_${today}`)) return false;
-      return true;
-    });
+    const missed = todayGoals.filter((g) => goalKind(g) !== "project" && !checkinSet.has(`${g.id}_${today}`));
     if (missed.length === 0) return null;
     return `밤 9시가 넘었어요 — 아직 안 찍은 도장이 ${missed.length}개 있어요!`;
-  }, [myGoals, checkinSet, clock]);
+  }, [todayGoals, checkinSet, clock]);
 
   // ----- 시점 프롬프트: 주기가 된 인생 설계 작업을 오늘 화면으로 불러온다 -----
   // 탭을 찾아가는 대신, 복기·시즌 같은 저빈도 작업이 때가 되면 먼저 말을 건다.
@@ -369,7 +381,7 @@ export default function App() {
   const xpBase = xpForLevel(myLevel);
   const xpNeed = xpForLevel(myLevel + 1) - xpBase;
   const xpPct = Math.round(((myXP - xpBase) / xpNeed) * 100);
-  const todayStampGoals = myGoals.filter((g) => g.type !== "milestone");
+  const todayStampGoals = todayGoals.filter((g) => goalKind(g) !== "project");
   const todayDone = todayStampGoals.filter((g) => checkinSet.has(`${g.id}_${todayStr(0)}`)).length;
   const perfectToday = todayStampGoals.length > 0 && todayDone === todayStampGoals.length;
 
@@ -398,6 +410,7 @@ export default function App() {
     const ok = await mutate({ action: "addGoal", goal });
     if (ok) {
       setAdding(false);
+      showToast(goal.scheduledWeek ? "목표가 이번 주에 추가되었습니다." : "목표가 저장되었습니다.");
       if (goalDraftMemo) {
         await mutate({ action: "deleteGoalMemo", memoId: goalDraftMemo.id });
         setGoalDraftMemo(null);
@@ -440,6 +453,53 @@ export default function App() {
   const updateGoal = (goalId, fields) =>
     mutate({ action: "updateGoal", goalId, ...fields });
 
+  const saveGoalEdit = async (goalId, goal) => {
+    const ok = await mutate({ action: "updateGoal", goalId, goal });
+    if (ok) {
+      setEditingGoal(null);
+      showToast("목표 수정이 저장되었습니다.");
+    }
+    return ok;
+  };
+
+  const goalAction = async (goal, action) => {
+    if (action === "duplicate") {
+      const ok = await mutate({ action: "duplicateGoal", goalId: goal.id });
+      if (ok) showToast("목표를 복제했습니다.");
+      return ok;
+    }
+    if (action === "today" || action === "week") {
+      const ok = await mutate({ action: "scheduleGoal", goalId: goal.id, destination: action });
+      if (ok) showToast(action === "today" ? "목표를 오늘로 보냈습니다." : "목표가 이번 주에 추가되었습니다.");
+      return ok;
+    }
+    const status = action === "pause" ? "paused" : action === "complete" ? "completed" : "active";
+    const ok = await mutate({ action: "setGoalStatus", goalId: goal.id, status });
+    if (ok) showToast(status === "paused" ? "목표를 잠시 멈췄습니다." : status === "completed" ? "목표를 완료했습니다." : "목표를 다시 시작했습니다.");
+    return ok;
+  };
+
+  const toggleSubtask = (goalId, taskId, done) =>
+    mutate({ action: "toggleSubtask", goalId, taskId, done });
+
+  const scheduleSubtask = async (goalId, taskId, destination) => {
+    const ok = await mutate({ action: "scheduleSubtask", goalId, taskId, destination });
+    if (ok) showToast(destination === "today" ? "하위 작업을 오늘로 보냈습니다." : "하위 작업을 이번 주로 보냈습니다.");
+    return ok;
+  };
+
+  const saveKpi = async (kpi) => {
+    const ok = await mutate({ action: "setKpi", kpi });
+    if (ok) showToast("KPI가 저장되었습니다.");
+    return ok;
+  };
+
+  const recordKpi = async (kpiId, value, weekStart) => {
+    const ok = await mutate({ action: "recordKpi", kpiId, value, weekStart });
+    if (ok) showToast("이번 주 KPI를 기록했습니다.");
+    return ok;
+  };
+
   const toggleReaction = (goalId, emoji) => {
     const date = todayStr(0);
     const match = (r) => r.goalId === goalId && r.date === date && r.emoji === emoji && r.by === me;
@@ -476,8 +536,11 @@ export default function App() {
   const saveLifeDomain = (domain) =>
     mutate({ action: "setLifeDomain", domain });
 
-  const saveSeason = (season) =>
-    mutate({ action: "setSeason", season });
+  const saveSeason = async (season) => {
+    const ok = await mutate({ action: "setSeason", season });
+    if (ok) showToast("12주 시즌이 저장되었습니다.");
+    return ok;
+  };
 
   const closeSeason = () => {
     const ok = window.confirm("현재 12주 시즌을 마감할까요? 기록은 남고 새 시즌을 시작할 수 있어요.");
@@ -503,8 +566,11 @@ export default function App() {
   const applyAiGoalDraft = (draft) =>
     mutate({ action: "applyAiGoalDraft", draft });
 
-  const saveWeeklyReview = (review) =>
-    mutate({ action: "setWeeklyReview", review });
+  const saveWeeklyReview = async (review) => {
+    const ok = await mutate({ action: "setWeeklyReview", review });
+    if (ok) showToast(review.createPromises ? "복기와 다음 주 약속을 저장했습니다." : "이번 주 복기를 저장했습니다.");
+    return ok;
+  };
 
   const saveMonthlyReview = (review) =>
     mutate({ action: "setMonthlyReview", review });
@@ -592,6 +658,7 @@ export default function App() {
     return myGoals.filter(
       (g) =>
         g.type === "daily" &&
+        isGoalDueOn(g, yesterday) &&
         (!g.createdAt || g.createdAt <= yesterday) &&
         !checkinSet.has(`${g.id}_${yesterday}`) &&
         !state.excuses.some((x) => x.goalId === g.id && x.date === yesterday)
@@ -638,6 +705,7 @@ export default function App() {
                 <b>현실 확인 · 다음 약속</b>
               </div>
             </div>
+            <PhotoDuo compact />
           </section>
           <form className="gate-card" onSubmit={submitName}>
             <h2>입장하기</h2>
@@ -672,7 +740,19 @@ export default function App() {
       : null;
 
   const renderGoalCard = (goal, isMine) =>
-    goal.type === "milestone" ? (
+    goalKind(goal) === "project" ? (
+      <ProjectGoalCard
+        key={goal.id}
+        goal={goal}
+        season={seasonOf(goal)}
+        isMine={isMine}
+        onToggleTask={toggleSubtask}
+        onScheduleTask={scheduleSubtask}
+        onEdit={setEditingGoal}
+        onAction={goalAction}
+        onDelete={deleteGoal}
+      />
+    ) : goal.type === "milestone" ? (
       <MilestoneGoalCard
         key={goal.id}
         goal={goal}
@@ -685,6 +765,8 @@ export default function App() {
         onSaveFailureReason={saveFailureReason}
         onToggleReaction={toggleReaction}
         onDelete={deleteGoal}
+        onEdit={setEditingGoal}
+        onAction={goalAction}
       />
     ) : (
       <StampGoalCard
@@ -701,6 +783,8 @@ export default function App() {
         onToggleReaction={toggleReaction}
         onUpdateGoal={updateGoal}
         onDelete={deleteGoal}
+        onEdit={setEditingGoal}
+        onAction={goalAction}
         onPeekExcuse={peekExcuse}
       />
     );
@@ -731,10 +815,14 @@ export default function App() {
           </button>
         )}
       </div>
+      <PhotoDuo users={state.users} />
 
       <nav className="view-tabs" aria-label="주요 화면">
         <button type="button" className={view === "board" ? "active" : ""} onClick={() => setView("board")}>
           <span>今日</span> 오늘
+        </button>
+        <button type="button" className={view === "week" ? "active" : ""} onClick={() => setView("week")}>
+          <span>週</span> 이번 주
         </button>
         <button type="button" className={view === "design" ? "active" : ""} onClick={() => setView("design")}>
           <span>設</span> 설계실
@@ -746,6 +834,22 @@ export default function App() {
           <span>村</span> 마을 <span className="tab-level">Lv.{myLevel}</span>
         </button>
       </nav>
+
+      {view === "week" && (
+        <WeekView
+          state={state}
+          me={me}
+          progressSum={progressSum}
+          checkins={state.checkins}
+          activeSeason={myActiveSeason}
+          onEdit={setEditingGoal}
+          onAction={goalAction}
+          onAdd={() => setAdding(true)}
+          onOpenReview={() => goToDesign("reflection")}
+          onSaveKpi={saveKpi}
+          onRecordKpi={recordKpi}
+        />
+      )}
 
       {view === "design" && (
         <div className="design-room">
@@ -943,31 +1047,20 @@ export default function App() {
                 </span>
               </div>
               <div className="goal-list">
-                {loaded && myGoals.length === 0 && !adding && (
+                {loaded && todayGoals.length === 0 && (
                   <div className="empty-note">
-                    아직 목표 없음.
+                    오늘 예정된 실행이 없어요.
                     <br />
-                    아래에서 첫 목표 추가해봐.
+                    이번 주 화면에서 다음 약속을 확인해보세요.
                   </div>
                 )}
-                {myGoals.map((g) => renderGoalCard(g, true))}
-                {adding ? (
-                  <AddGoalForm
-                    onAdd={addGoal}
-                    onCancel={() => {
-                      setAdding(false);
-                      setGoalDraftMemo(null);
-                    }}
-                    activeSeason={myActiveSeason}
-                    initialTitle={goalDraftMemo?.text || ""}
-                  />
-                ) : (
-                  <div className="add-action-row">
-                    <button className="add-goal-trigger" onClick={() => setAdding(true)} type="button">
-                      + 목표 추가
-                    </button>
-                  </div>
-                )}
+                {todayGoals.map((g) => renderGoalCard(g, true))}
+                <div className="add-action-row">
+                  <button className="add-goal-trigger" onClick={() => setAdding(true)} type="button">
+                    + 오늘의 실행 만들기
+                  </button>
+                </div>
+                {activeMilestones.length > 0 && <details className="board-collapsible"><summary>진행 중인 기간 목표 <b>{activeMilestones.length}</b></summary><div className="goal-list">{activeMilestones.map((goal) => renderGoalCard(goal, true))}</div></details>}
                 <div id="goal-memos">
                   <GoalMemoPanel
                     memos={myGoalMemos}
@@ -991,7 +1084,11 @@ export default function App() {
                   <span className="tag">{otherName ? `${otherName} · Lv.${otherLevel}` : "대기 중"}</span>
                 </div>
               </div>
-              <div className="goal-list">
+              <div className="friend-today-summary">
+                <strong>{otherName || "친구"} 오늘 {otherGoals.filter((goal) => goal.type !== "milestone" && checkinSet.has(`${goal.id}_${today}`)).length}/{otherGoals.filter((goal) => goal.type !== "milestone" && isGoalDueOn(goal, today)).length} 완료</strong>
+                {otherName && <button type="button" onClick={poke}>응원하기</button>}
+              </div>
+              <details className="board-collapsible"><summary>친구 목표 자세히 보기</summary><div className="goal-list">
                 {loaded && otherGoals.length === 0 && (
                   <div className="empty-note">
                     {otherName
@@ -1000,7 +1097,7 @@ export default function App() {
                   </div>
                 )}
                 {otherGoals.map((g) => renderGoalCard(g, false))}
-              </div>
+              </div></details>
             </section>
           </div>
 
@@ -1018,6 +1115,21 @@ export default function App() {
             오늘·어제 칸 체크 가능 · 못 찍은 날엔 이유 남기기 · 친구 도장엔 리액션·응원·콕 찌르기
           </div>
         </>
+      )}
+
+      {(adding || editingGoal) && (
+        <AddGoalForm
+          onAdd={addGoal}
+          onSave={saveGoalEdit}
+          onCancel={() => {
+            setAdding(false);
+            setEditingGoal(null);
+            setGoalDraftMemo(null);
+          }}
+          activeSeason={myActiveSeason}
+          initialGoal={editingGoal}
+          initialTitle={goalDraftMemo?.text || ""}
+        />
       )}
 
       <Toast toast={toast} />

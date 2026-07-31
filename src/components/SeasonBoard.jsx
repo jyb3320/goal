@@ -5,8 +5,12 @@ const EMPTY_SEASON = {
   title: "",
   focusAreas: "",
   outcomes: "",
+  desiredResults: "",
+  coreActions: "",
+  leadingIndicators: "",
   why: "",
   notDoing: "",
+  autoCreate: { project: false, routine: false, milestone: false, kpi: false },
   ...defaultSeasonDates(),
 };
 
@@ -30,11 +34,14 @@ function SeasonEditor({ season, onSave }) {
         <label><span>종료일</span><input type="date" value={draft.endDate} onChange={(e) => setDraft({ ...draft, endDate: e.target.value })} /></label>
       </div>
       <label><span>집중할 인생 영역 · 최대 두 개</span><input value={draft.focusAreas} onChange={(e) => setDraft({ ...draft, focusAreas: e.target.value })} placeholder="건강, 일과 커리어" maxLength={200} /></label>
-      <label><span>12주 뒤 완료됐다고 판단할 결과</span><textarea value={draft.outcomes} onChange={(e) => setDraft({ ...draft, outcomes: e.target.value })} rows={4} placeholder={"• 5km를 쉬지 않고 완주한다\n• 포트폴리오를 공개한다"} maxLength={700} /></label>
+      <label><span>12주 뒤 원하는 결과</span><textarea value={draft.desiredResults || draft.outcomes} onChange={(e) => setDraft({ ...draft, desiredResults: e.target.value, outcomes: e.target.value })} rows={4} placeholder={"• 콘텐츠 24개 발행\n• 유효한 채용·협업 문의 1건"} maxLength={1000} /></label>
+      <label><span>이번 시즌의 핵심 행동</span><textarea value={draft.coreActions || ""} onChange={(e) => setDraft({ ...draft, coreActions: e.target.value })} rows={3} placeholder={"화·금 콘텐츠 발행\n일요일 데이터 복기"} maxLength={800} /></label>
+      <label><span>확인할 선행 지표</span><textarea value={draft.leadingIndicators || ""} onChange={(e) => setDraft({ ...draft, leadingIndicators: e.target.value })} rows={3} placeholder="업로드 준수율, 저장률, 링크 클릭, 유효 DM" maxLength={600} /></label>
       <label><span>이 시즌이 중요한 이유</span><textarea value={draft.why} onChange={(e) => setDraft({ ...draft, why: e.target.value })} rows={3} maxLength={500} /></label>
       <label><span>이번 시즌에 하지 않을 것</span><textarea value={draft.notDoing} onChange={(e) => setDraft({ ...draft, notDoing: e.target.value })} rows={3} placeholder="새 사이드 프로젝트를 시작하지 않는다" maxLength={500} /></label>
-      <button className="btn-primary life-save" type="submit" disabled={saving || !draft.title.trim() || !draft.outcomes.trim()}>
-        {saving ? "저장 중…" : "12주 시즌 선언"}
+      <fieldset className="season-auto-create"><legend>저장하면서 실행 항목 자동 생성</legend>{[["project", "프로젝트"], ["routine", "반복 루틴"], ["milestone", "기간 목표"], ["kpi", "KPI 기록"]].map(([key, label]) => <label key={key}><input type="checkbox" checked={!!draft.autoCreate?.[key]} onChange={(e) => setDraft({ ...draft, autoCreate: { ...(draft.autoCreate || {}), [key]: e.target.checked } })} /><span>{label}</span></label>)}</fieldset>
+      <button className="btn-primary life-save" type="submit" disabled={saving || !draft.title.trim() || !(draft.desiredResults || draft.outcomes || "").trim()}>
+        {saving ? "저장 중…" : season ? "시즌 저장" : "12주 시즌 선언"}
       </button>
     </form>
   );
@@ -48,7 +55,9 @@ function SeasonRead({ season, owner }) {
       <h3>{season.title}</h3>
       {season.focusAreas && <div className="season-focus">{season.focusAreas}</div>}
       <dl>
-        <div><dt>완료 기준</dt><dd>{season.outcomes}</dd></div>
+        <div><dt>12주 결과</dt><dd>{season.desiredResults || season.outcomes}</dd></div>
+        {season.coreActions && <div><dt>핵심 행동</dt><dd>{season.coreActions}</dd></div>}
+        {season.leadingIndicators && <div><dt>선행 지표</dt><dd>{season.leadingIndicators}</dd></div>}
         {season.why && <div><dt>중요한 이유</dt><dd>{season.why}</dd></div>}
         {season.notDoing && <div><dt>하지 않을 것</dt><dd>{season.notDoing}</dd></div>}
       </dl>
@@ -58,7 +67,7 @@ function SeasonRead({ season, owner }) {
 
 function ItemComposer({ season, onAdd }) {
   const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState({ kind: "project", title: "", domainKey: "health", doneDefinition: "" });
+  const [draft, setDraft] = useState({ kind: "project", title: "", domainKey: "health", doneDefinition: "", repeatType: "daily", repeatDays: [], repeatCount: 1, startDate: "", deadline: "", executionTime: "", cue: "", minimumVersion: "", reminder: false, showOnBoard: true, createGoal: true });
   const [saving, setSaving] = useState(false);
 
   const submit = async (event) => {
@@ -66,7 +75,7 @@ function ItemComposer({ season, onAdd }) {
     setSaving(true);
     const ok = await onAdd({ ...draft, seasonId: season?.id || "" });
     if (ok) {
-      setDraft({ kind: "project", title: "", domainKey: "health", doneDefinition: "" });
+      setDraft({ kind: "project", title: "", domainKey: "health", doneDefinition: "", repeatType: "daily", repeatDays: [], repeatCount: 1, startDate: "", deadline: "", executionTime: "", cue: "", minimumVersion: "", reminder: false, showOnBoard: true, createGoal: true });
       setOpen(false);
     }
     setSaving(false);
@@ -81,6 +90,16 @@ function ItemComposer({ season, onAdd }) {
       </div>
       <label><span>이름</span><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="무엇을 끝내거나 유지하거나 해결할 것인가" /></label>
       <label><span>완료·개선됐다고 판단할 기준</span><textarea value={draft.doneDefinition} onChange={(e) => setDraft({ ...draft, doneDefinition: e.target.value })} rows={2} /></label>
+      {draft.kind === "routine" && <div className="season-routine-settings">
+        <label><span>반복 유형</span><select value={draft.repeatType} onChange={(e) => setDraft({ ...draft, repeatType: e.target.value })}><option value="daily">매일</option><option value="weekdays">특정 요일</option><option value="weekly">주 N회</option><option value="biweekly">격주</option><option value="monthly">월 N회</option><option value="custom">사용자 지정</option><option value="none">반복 없음</option></select></label>
+        {draft.repeatType === "weekdays" && <div className="weekday-picker">{["일", "월", "화", "수", "목", "금", "토"].map((day, index) => <button type="button" key={day} className={draft.repeatDays.includes(index) ? "selected" : ""} onClick={() => setDraft({ ...draft, repeatDays: draft.repeatDays.includes(index) ? draft.repeatDays.filter((item) => item !== index) : [...draft.repeatDays, index] })}>{day}</button>)}</div>}
+        {(draft.repeatType === "weekly" || draft.repeatType === "monthly") && <label><span>목표 횟수</span><input type="number" min="1" value={draft.repeatCount} onChange={(e) => setDraft({ ...draft, repeatCount: e.target.value })} /></label>}
+        <div className="field-pair"><label><span>시작일</span><input type="date" value={draft.startDate} onChange={(e) => setDraft({ ...draft, startDate: e.target.value })} /></label><label><span>종료일</span><input type="date" value={draft.deadline} onChange={(e) => setDraft({ ...draft, deadline: e.target.value })} /></label></div>
+        <label><span>실행 시간</span><input type="time" value={draft.executionTime} onChange={(e) => setDraft({ ...draft, executionTime: e.target.value })} /></label>
+        <label><span>언제·어디서</span><input value={draft.cue} onChange={(e) => setDraft({ ...draft, cue: e.target.value })} /></label>
+        <label><span>바쁜 날 최소치</span><input value={draft.minimumVersion} onChange={(e) => setDraft({ ...draft, minimumVersion: e.target.value })} /></label>
+        <label className="sheet-check"><input type="checkbox" checked={draft.showOnBoard} onChange={(e) => setDraft({ ...draft, showOnBoard: e.target.checked })} /><span>오늘 도장판에 자동 표시</span></label>
+      </div>}
       <div className="inline-actions"><button type="button" className="btn-ghost" onClick={() => setOpen(false)}>취소</button><button className="btn-primary" type="submit" disabled={saving || !draft.title.trim()}>{saving ? "저장 중…" : "추가"}</button></div>
     </form>
   );

@@ -3,6 +3,8 @@ import { last14, todayStr, dowOf, computeStreak } from "../lib/dates.js";
 import { burst, stampSound, vibrate, floatText } from "../lib/fx.js";
 import Reactions from "./Reactions.jsx";
 import { domainOf } from "../lib/life.js";
+import { repeatLabel, weekProgress } from "../lib/goals.js";
+import GoalMenu from "./GoalMenu.jsx";
 
 export default function StampGoalCard({
   goal,
@@ -17,6 +19,8 @@ export default function StampGoalCard({
   onToggleReaction,
   onUpdateGoal,
   onDelete,
+  onEdit,
+  onAction,
   onPeekExcuse,
 }) {
   const [stampingKey, setStampingKey] = useState(null);
@@ -40,6 +44,7 @@ export default function StampGoalCard({
   const badge = streak > 0 ? `연속 ${streak}일` : "오늘부터";
   const today = todayStr(0);
   const todayStamped = checkinSet.has(`${goal.id}_${today}`);
+  const weekly = weekProgress(goal, checkins);
 
   // 손으로 찍은 느낌 — 날짜별로 늘 같은, 살짝 비뚤어진 각도
   const sealRot = (key) => {
@@ -98,8 +103,12 @@ export default function StampGoalCard({
           {goal.title}
           {goal.domainKey && <span className="life-domain-tag">{domainOf(goal.domainKey)?.label}</span>}
         </div>
-        <div className={`streak-badge ${badge.startsWith("오늘부터") ? "zero" : ""}`}>{badge}</div>
+        <div className="goal-top-actions">
+          <div className={`streak-badge ${badge.startsWith("오늘부터") ? "zero" : ""}`}>{badge}</div>
+          {isMine && <GoalMenu goal={goal} onEdit={onEdit} onAction={onAction} onDelete={onDelete} />}
+        </div>
       </div>
+      <div className="goal-schedule-line">{repeatLabel(goal)}{goal.repeatType === "weekly" ? ` · 이번 주 ${weekly.count}/${weekly.target}회` : ""}{goal.executionTime ? ` · ${goal.executionTime}` : ""}</div>
       {goal.cue && <div className="goal-cue" title="실행 신호">🕘 {goal.cue}</div>}
       {season && (
         <div className="goal-thread" title={`이 도장이 12주 시즌 '${season.title}'에 쌓여요`}>
@@ -210,11 +219,6 @@ export default function StampGoalCard({
 
       <div className="goal-foot">
         <Reactions goal={goal} isMine={isMine} reactions={reactions} me={me} onToggle={onToggleReaction} />
-        {isMine && (
-          <button className="delete-goal" onClick={() => onDelete(goal)} type="button">
-            삭제
-          </button>
-        )}
       </div>
     </div>
   );

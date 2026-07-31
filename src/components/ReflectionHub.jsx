@@ -3,14 +3,12 @@ import { currentMonth } from "../lib/life.js";
 import { weekDates } from "../lib/dates.js";
 
 const WEEK_FIELDS = [
-  ["facts", "이번 주 실제로 일어난 일", "해석보다 사실을 먼저 적기"],
-  ["wins", "잘한 선택", "결과보다 내가 통제한 좋은 선택"],
-  ["avoidance", "계속 피한 문제", "불편해서 미루거나 모른 척한 것"],
-  ["timeMoney", "시간과 돈을 어디에 썼나", "내 우선순위와 실제 사용이 일치했는가"],
-  ["worry", "현재 가장 큰 걱정", "머릿속에서 반복되는 걱정을 밖으로 꺼내기"],
-  ["honestTalk", "친구에게 솔직히 말할 것", "도움이 필요하거나 숨기고 있던 이야기"],
+  ["did", "1) 실제로 한 일은 무엇인가?", "완료한 행동과 진척을 사실대로 적기"],
+  ["goodConditions", "2) 잘된 조건은 무엇인가?", "시간·장소·도움·환경에서 찾기"],
+  ["blockers", "3) 막힌 이유는 무엇인가?", "의지보다 구조와 조건을 보기"],
+  ["keep", "4) 다음 주에도 유지할 것은?", "효과가 있었던 행동과 조건"],
+  ["reduce", "5) 중단하거나 줄일 것은?", "덜어내야 할 일과 기준"],
   ["promises", "다음 주 약속 세 가지", "구체적이고 확인 가능한 약속"],
-  ["priority", "그중 가장 중요한 하나", "다른 것을 놓쳐도 이것은 지키기"],
 ];
 
 const MONTH_FIELDS = [
@@ -25,16 +23,18 @@ const MONTH_FIELDS = [
 function ReviewForm({ fields, initial, periodKey, onSave, submitLabel }) {
   const [draft, setDraft] = useState({});
   const [saving, setSaving] = useState(false);
+  const [createPromises, setCreatePromises] = useState(true);
   useEffect(() => setDraft(initial || {}), [initial]);
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
-    await onSave({ ...draft, ...periodKey });
+    await onSave({ ...draft, ...periodKey, createPromises });
     setSaving(false);
   };
   return (
     <form className="review-form" onSubmit={submit}>
       {fields.map(([key, label, placeholder]) => <label key={key}><span>{label}</span><textarea value={draft[key] || ""} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} placeholder={placeholder} rows={3} /></label>)}
+      {"weekStart" in periodKey && <label className="sheet-check"><input type="checkbox" checked={createPromises} onChange={(e) => setCreatePromises(e.target.checked)} /><span>다음 주 약속 세 가지를 다음 주 목표로 자동 생성</span></label>}
       <button className="btn-primary life-save" type="submit" disabled={saving}>{saving ? "기록 중…" : submitLabel}</button>
     </form>
   );
@@ -106,6 +106,27 @@ export default function ReflectionHub({ state, me, otherName, onSaveWeekly, onSa
   const myMonthly = state.monthlyReviews.find((review) => review.owner === me && review.month === month);
   const friendMonthly = otherName ? [...state.monthlyReviews].reverse().find((review) => review.owner === otherName) : null;
   const support = useMemo(() => state.lifeProfiles.filter((profile) => profile.supportNeeded), [state.lifeProfiles]);
+  const weekStats = useMemo(() => {
+    const days = weekDates(0);
+    const myGoals = state.goals.filter((goal) => {
+      if (goal.owner !== me || goal.status === "failed") return false;
+      if (goal.startDate && goal.startDate > days[6]) return false;
+      if (goal.deadline && goal.deadline < days[0]) return false;
+      if (goal.scheduledWeek && goal.scheduledWeek !== days[0]) return false;
+      if (goal.scheduledDate && !days.includes(goal.scheduledDate) && goal.repeatType === "none") return false;
+      return true;
+    });
+    const planned = myGoals.filter((goal) => goal.type !== "milestone").reduce((sum, goal) => {
+      if (goal.repeatType === "weekdays") return sum + (goal.repeatDays || []).filter((day) => days.some((date) => new Date(`${date}T00:00:00`).getDay() === Number(day))).length;
+      if (goal.repeatType === "weekly") return sum + Math.max(1, goal.repeatCount || 1);
+      return sum + 1;
+    }, 0);
+    const ids = new Set(myGoals.map((goal) => goal.id));
+    const completed = state.checkins.filter((item) => ids.has(item.goalId) && days.includes(item.date)).length;
+    const minimum = state.checkins.filter((item) => ids.has(item.goalId) && days.includes(item.date) && item.min).length;
+    const unfinished = myGoals.filter((goal) => goal.deadline && goal.deadline <= days[6] && goal.status !== "completed").length;
+    return { planned, completed, minimum, unfinished, rate: planned ? Math.round((completed / planned) * 100) : 0 };
+  }, [state.goals, state.checkins, me]);
 
   return (
     <div className="life-surface">
@@ -123,7 +144,7 @@ export default function ReflectionHub({ state, me, otherName, onSaveWeekly, onSa
           {support.length > 0 && <div className="support-notes">{support.map((item) => <p key={item.owner}><b>{item.owner}에게 필요한 도움</b>{item.supportNeeded}</p>)}</div>}
         </section>
         <div className="review-columns">
-          <section className="life-paper"><div className="life-section-head"><div><span>週</span><h3>{me}의 이번 주</h3></div><p>{weekStart} 시작</p></div><ReviewForm fields={WEEK_FIELDS} initial={myWeekly} periodKey={{ weekStart }} onSave={onSaveWeekly} submitLabel="이번 주 복기 저장" /></section>
+          <section className="life-paper"><div className="life-section-head"><div><span>週</span><h3>{me}의 이번 주</h3></div><p>{weekStart} 시작</p></div><div className="review-auto-summary"><div><span>계획 행동</span><strong>{weekStats.planned}</strong></div><div><span>완료 행동</span><strong>{weekStats.completed}</strong></div><div><span>준수율</span><strong>{weekStats.rate}%</strong></div><div><span>최소치 사용</span><strong>{weekStats.minimum}</strong></div><div><span>미완료</span><strong>{weekStats.unfinished}</strong></div></div><ReviewForm fields={WEEK_FIELDS} initial={myWeekly} periodKey={{ weekStart }} onSave={onSaveWeekly} submitLabel="이번 주 복기 저장" /></section>
           <section className="life-paper friend-review"><div className="life-section-head"><div><span>友</span><h3>{otherName || "친구"}의 최근 기록</h3></div></div><ReviewRead review={friendWeekly} fields={WEEK_FIELDS} empty={otherName ? "친구의 주간 기록을 기다리고 있어요." : "친구가 들어오면 기록이 보여요."} /></section>
         </div>
       </>}

@@ -10,6 +10,10 @@ import {
 export const KEY = "goaltracker:state";
 export const MAX_USERS = 2;
 export const GOAL_TYPES = ["daily", "milestone"];
+const GOAL_KINDS = ["routine", "milestone", "project", "problem"];
+const REPEAT_TYPES = ["daily", "weekdays", "weekly", "biweekly", "monthly", "custom", "none"];
+const GOAL_CLASSES = ["behavior", "signal", "outcome"];
+const KPI_TYPES = ["number", "percentage", "money", "yesno", "formula", "cumulative"];
 export const LIFE_DOMAIN_KEYS = ["health", "work", "money", "relationships", "love", "growth", "mind", "experience", "contribution"];
 
 // 기록 보존 기간 — 지나면 컴팩션 대상
@@ -39,6 +43,7 @@ export function emptyState() {
     weeklyReviews: [], // 주간 인생 회의 기록
     monthlyReviews: [], // 월간·분기 방향 복기
     decisions: [], // 중요한 결정과 사후 결과
+    kpis: [], // 주간 복기에서 기록하는 관찰 지표
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
     xpEvents: [], // 개인·마을 XP 원장. dedupeKey가 논리적 unique 제약 역할을 한다.
@@ -108,7 +113,7 @@ export function normalize(raw) {
   for (const key of [
     "users", "goals", "checkins", "progress", "reactions", "messages", "pokes",
     "excuses", "goalMemos", "bigGoals", "lifeProfiles", "lifeDomains", "seasons",
-    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "xpEvents",
+    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "kpis", "xpEvents",
   ]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
@@ -118,7 +123,40 @@ export function normalize(raw) {
   if (s.users.length === 0 && s.goals.length > 0) {
     s.users = [...new Set(s.goals.map((g) => g.owner))].slice(0, MAX_USERS);
   }
-  s.goals = s.goals.map((g) => ({ type: "daily", ...g }));
+  s.goals = s.goals.map((raw) => {
+    const g = { type: "daily", ...raw };
+    g.kind = GOAL_KINDS.includes(g.kind)
+      ? g.kind
+      : g.type === "milestone" ? "milestone" : "routine";
+    g.goalClass = GOAL_CLASSES.includes(g.goalClass) ? g.goalClass : "behavior";
+    g.repeatType = REPEAT_TYPES.includes(g.repeatType)
+      ? g.repeatType
+      : g.type === "milestone" ? "none" : "daily";
+    if (!Array.isArray(g.repeatDays)) g.repeatDays = [];
+    if (!Array.isArray(g.customDates)) g.customDates = [];
+    if (!Array.isArray(g.subtasks)) g.subtasks = [];
+    if (!g.startDate) g.startDate = g.createdAt || "";
+    if (!g.status) g.status = "active";
+    if (g.showOnBoard === undefined) g.showOnBoard = true;
+    if (g.allowSubstitute === undefined) g.allowSubstitute = true;
+    return g;
+  });
+  // 구버전 시즌 항목은 제목이 같은 실제 목표가 있으면 참조로 연결한다.
+  // 원본 항목과 목표/도장 기록은 지우거나 복제하지 않는다.
+  s.lifeItems = s.lifeItems.map((item) => {
+    if (item.goalId) return item;
+    const linked = s.goals.find((goal) =>
+      goal.owner === item.owner &&
+      goal.title.trim().toLowerCase() === String(item.title || "").trim().toLowerCase()
+    );
+    return linked ? { ...item, goalId: linked.id } : item;
+  });
+  s.seasons = s.seasons.map((season) => ({
+    ...season,
+    desiredResults: season.desiredResults || season.outcomes || "",
+    coreActions: season.coreActions || "",
+    leadingIndicators: season.leadingIndicators || "",
+  }));
   // 옛 목표 메모(제목/본문/승격 구조) → 자유 텍스트 메모로 마이그레이션.
   // 이미 목표로 승격된 메모는 이력일 뿐이라 버린다.
   s.goalMemos = s.goalMemos
@@ -216,6 +254,78 @@ function cleanTextFields(raw, specs) {
   return out;
 }
 
+function cleanDate(value) {
+  const date = str(value, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "";
+}
+
+function cleanRepeatDays(value) {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.map((day) => int(day, -1)).filter((day) => day >= 0 && day <= 6))].slice(0, 7);
+}
+
+function cleanSubtasks(value, previous = []) {
+  if (!Array.isArray(value)) return previous;
+  return value.slice(0, 40).map((task, index) => {
+    const old = previous.find((item) => item.id === str(task?.id, 50));
+    return {
+      id: old?.id || str(task?.id, 50) || newId("task"),
+      title: str(task?.title, 120),
+      done: task?.done === true,
+      deadline: cleanDate(task?.deadline),
+      scheduledDate: cleanDate(task?.scheduledDate),
+      scheduledWeek: cleanDate(task?.scheduledWeek),
+      order: index,
+      completedAt: task?.done === true ? old?.completedAt || new Date().toISOString() : "",
+    };
+  }).filter((task) => task.title);
+}
+
+function applyGoalFields(goal, input, { creating = false } = {}) {
+  const kind = GOAL_KINDS.includes(input.kind)
+    ? input.kind
+    : input.type === "milestone" || goal.type === "milestone" ? "milestone" : "routine";
+  goal.kind = kind;
+  goal.type = kind === "milestone" ? "milestone" : "daily";
+  if (input.title !== undefined) goal.title = str(input.title, 120);
+  if (input.icon !== undefined) goal.icon = str(input.icon, 4) || "🎯";
+  if (input.goalClass !== undefined || creating) {
+    goal.goalClass = GOAL_CLASSES.includes(input.goalClass) ? input.goalClass : "behavior";
+  }
+  if (input.target !== undefined || creating) goal.target = Math.max(1, int(input.target, 1));
+  if (input.unit !== undefined || creating) goal.unit = str(input.unit, 16) || "개";
+  if (input.startDate !== undefined || creating) goal.startDate = cleanDate(input.startDate) || goal.createdAt;
+  if (input.deadline !== undefined || creating) goal.deadline = cleanDate(input.deadline);
+  if (input.repeatType !== undefined || creating) {
+    const fallback = kind === "routine" ? "daily" : "none";
+    goal.repeatType = REPEAT_TYPES.includes(input.repeatType) ? input.repeatType : fallback;
+  }
+  if (input.repeatDays !== undefined || creating) goal.repeatDays = cleanRepeatDays(input.repeatDays);
+  if (input.repeatCount !== undefined || creating) goal.repeatCount = Math.max(1, Math.min(31, int(input.repeatCount, 1)));
+  if (input.customDates !== undefined || creating) {
+    goal.customDates = Array.isArray(input.customDates) ? input.customDates.map(cleanDate).filter(Boolean).slice(0, 100) : [];
+  }
+  if (input.executionTime !== undefined || creating) goal.executionTime = str(input.executionTime, 5);
+  if (kind === "routine" || kind === "problem") {
+    if (input.cue !== undefined || creating) goal.cue = str(input.cue, 100);
+    if (input.minimumVersion !== undefined || creating) goal.minimumVersion = str(input.minimumVersion, 120);
+  } else {
+    delete goal.cue;
+    delete goal.minimumVersion;
+  }
+  if (input.domainKey !== undefined || creating) goal.domainKey = str(input.domainKey, 30);
+  if (input.seasonId !== undefined || creating) goal.seasonId = str(input.seasonId, 50);
+  if (input.showOnBoard !== undefined || creating) goal.showOnBoard = input.showOnBoard !== false;
+  if (input.allowSubstitute !== undefined || creating) goal.allowSubstitute = input.allowSubstitute !== false;
+  if (input.reminder !== undefined || creating) goal.reminder = input.reminder === true;
+  if (input.scheduledDate !== undefined || creating) goal.scheduledDate = cleanDate(input.scheduledDate);
+  if (input.scheduledWeek !== undefined || creating) goal.scheduledWeek = cleanDate(input.scheduledWeek);
+  if (input.subtasks !== undefined || creating) goal.subtasks = cleanSubtasks(input.subtasks, goal.subtasks || []);
+  if (input.status !== undefined && ["active", "paused", "completed", "failed"].includes(input.status)) {
+    goal.status = input.status;
+  }
+}
+
 // 상태가 무한히 크지 않게: 오래된 기록을 지우거나 집계로 합친다.
 // XP는 아카이브 집계(archive[user].stamps)로 보존된다.
 export function compact(state, today = seoulToday()) {
@@ -311,11 +421,16 @@ export function applyAction(state, body, user) {
         title: 100,
         focusAreas: 200,
         outcomes: 700,
+        desiredResults: 1000,
+        coreActions: 800,
+        leadingIndicators: 600,
         why: 500,
         notDoing: 500,
       });
-      if (!fields.title || !fields.outcomes) {
-        return { error: "시즌 이름과 완료 기준을 적어주세요", status: 400 };
+      fields.desiredResults = fields.desiredResults || fields.outcomes;
+      fields.outcomes = fields.desiredResults;
+      if (!fields.title || !fields.desiredResults) {
+        return { error: "시즌 이름과 12주 뒤 원하는 결과를 적어주세요", status: 400 };
       }
       const startDate = str(body.season?.startDate, 10) || today;
       const endDate = str(body.season?.endDate, 10) || shiftDate(startDate, 83);
@@ -333,6 +448,54 @@ export function applyAction(state, body, user) {
       };
       if (current) Object.assign(current, record);
       else state.seasons.push(record);
+      const auto = body.season?.autoCreate || {};
+      const makeGoal = (input) => {
+        const duplicate = state.goals.find((goal) =>
+          goal.owner === user && goal.seasonId === record.id && goal.title === input.title && goal.status !== "failed"
+        );
+        if (duplicate) return duplicate;
+        const goal = {
+          id: newId("g"),
+          owner: user,
+          title: input.title,
+          icon: input.icon || "🎯",
+          createdAt: today,
+          status: "active",
+        };
+        applyGoalFields(goal, { ...input, seasonId: record.id }, { creating: true });
+        state.goals.push(goal);
+        return goal;
+      };
+      const firstResult = fields.desiredResults.split("\n").map((line) => line.replace(/^[•\-\s]+/, "").trim()).find(Boolean);
+      const firstAction = fields.coreActions.split("\n").map((line) => line.replace(/^[•\-\s]+/, "").trim()).find(Boolean);
+      const firstKpi = fields.leadingIndicators.split(/[,\n]/).map((line) => line.replace(/^[•\-\s]+/, "").trim()).find(Boolean);
+      const weekdayMap = { 일: 0, 일요일: 0, 월: 1, 월요일: 1, 화: 2, 화요일: 2, 수: 3, 수요일: 3, 목: 4, 목요일: 4, 금: 5, 금요일: 5, 토: 6, 토요일: 6 };
+      const inferredDays = [...new Set((firstAction || "").split(/[\s·,/&+]+/).map((token) => weekdayMap[token]).filter((day) => day !== undefined))];
+      if (auto.project && firstResult) {
+        const goal = makeGoal({ title: firstResult, kind: "project", repeatType: "none", goalClass: "outcome", deadline: endDate });
+        if (!state.lifeItems.some((item) => item.goalId === goal.id)) {
+          state.lifeItems.push({ id: newId("life"), owner: user, title: goal.title, kind: "project", domainKey: "", seasonId: record.id, goalId: goal.id, doneDefinition: firstResult, status: "active", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        }
+      }
+      if (auto.routine && firstAction) {
+        const goal = makeGoal({
+          title: firstAction,
+          kind: "routine",
+          repeatType: inferredDays.length ? "weekdays" : "weekly",
+          repeatDays: inferredDays,
+          repeatCount: inferredDays.length || 1,
+          goalClass: "behavior",
+        });
+        if (!state.lifeItems.some((item) => item.goalId === goal.id)) {
+          state.lifeItems.push({ id: newId("life"), owner: user, title: goal.title, kind: "routine", domainKey: "", seasonId: record.id, goalId: goal.id, doneDefinition: firstAction, status: "active", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+        }
+      }
+      if (auto.milestone && firstResult) {
+        makeGoal({ title: firstResult, kind: "milestone", repeatType: "none", goalClass: "outcome", target: 1, unit: "회", deadline: endDate });
+      }
+      if (auto.kpi && firstKpi && !state.kpis.some((kpi) => kpi.owner === user && kpi.seasonId === record.id && kpi.title === firstKpi)) {
+        state.kpis.push({ id: newId("kpi"), owner: user, seasonId: record.id, title: firstKpi, type: "number", unit: "", formula: "", entries: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      }
       return {};
     }
 
@@ -419,6 +582,28 @@ export function applyAction(state, body, user) {
       if (seasonId && !state.seasons.some((season) => season.id === seasonId && season.owner === user)) {
         return { error: "본인 시즌에만 연결할 수 있어요", status: 403 };
       }
+      let goalId = "";
+      if (item.createGoal !== false && kind !== "problem") {
+        const goal = {
+          id: newId("g"),
+          owner: user,
+          title,
+          icon: str(item.icon, 4) || (kind === "routine" ? "🔁" : "📌"),
+          createdAt: today,
+          status: "active",
+        };
+        applyGoalFields(goal, {
+          ...item,
+          title,
+          kind,
+          domainKey,
+          seasonId,
+          repeatType: kind === "routine" ? item.repeatType || "daily" : "none",
+          showOnBoard: item.showOnBoard !== false,
+        }, { creating: true });
+        state.goals.push(goal);
+        goalId = goal.id;
+      }
       state.lifeItems.push({
         id: newId("life"),
         owner: user,
@@ -427,6 +612,7 @@ export function applyAction(state, body, user) {
         domainKey,
         seasonId,
         doneDefinition: str(item.doneDefinition, 400),
+        goalId,
         status: "active",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -451,6 +637,10 @@ export function applyAction(state, body, user) {
         item.domainKey = str(body.item.domainKey, 30);
         item.seasonId = str(body.item.seasonId, 50);
         item.doneDefinition = str(body.item.doneDefinition, 400);
+        if (item.goalId) {
+          const goal = findGoal(state, item.goalId);
+          if (goal) applyGoalFields(goal, { ...body.item, title: title || goal.title });
+        }
       }
       item.updatedAt = new Date().toISOString();
       return {};
@@ -462,6 +652,11 @@ export function applyAction(state, body, user) {
       if (!item) return { noop: true };
       if (item.owner !== user) return { error: "본인 항목만 삭제할 수 있어요", status: 403 };
       state.lifeItems = state.lifeItems.filter((x) => x.id !== id);
+      // 연결 목표는 과거 도장 보존을 위해 삭제하지 않고 시즌 연결만 해제한다.
+      if (item.goalId) {
+        const goal = findGoal(state, item.goalId);
+        if (goal) goal.seasonId = "";
+      }
       return {};
     }
 
@@ -494,12 +689,32 @@ export function applyAction(state, body, user) {
         honestTalk: 500,
         promises: 600,
         priority: 300,
+        did: 800,
+        goodConditions: 600,
+        blockers: 600,
+        keep: 500,
+        reduce: 500,
       });
       if (!Object.values(fields).some(Boolean)) return { error: "복기 내용을 적어주세요", status: 400 };
       const existing = state.weeklyReviews.find((r) => r.owner === user && r.weekStart === weekStart);
       const record = { id: existing?.id || newId("week"), owner: user, weekStart, ...fields, updatedAt: new Date().toISOString() };
       if (existing) Object.assign(existing, record);
       else state.weeklyReviews.push(record);
+      if (body.review?.createPromises === true) {
+        const nextWeekStart = shiftDate(weekStart, 7);
+        const promises = Array.isArray(body.review.promiseItems)
+          ? body.review.promiseItems.map((item) => str(item, 120)).filter(Boolean).slice(0, 3)
+          : fields.promises.split("\n").map((item) => item.replace(/^\s*[-•\d.)]+\s*/, "").trim()).filter(Boolean).slice(0, 3);
+        for (const title of promises) {
+          if (state.goals.some((goal) => goal.owner === user && goal.title === title && goal.scheduledWeek === nextWeekStart)) continue;
+          const goal = { id: newId("g"), owner: user, title, icon: "約", createdAt: today, status: "active" };
+          applyGoalFields(goal, {
+            kind: "routine", goalClass: "behavior", repeatType: "none",
+            scheduledWeek: nextWeekStart, startDate: nextWeekStart, showOnBoard: true,
+          }, { creating: true });
+          state.goals.push(goal);
+        }
+      }
       if (existing) return {};
       const award = awardPersonalXp(state, {
         recipientId: user,
@@ -591,7 +806,7 @@ export function applyAction(state, body, user) {
 
     case "addGoal": {
       const g = body.goal || {};
-      const title = str(g.title, 60);
+      const title = str(g.title, 120);
       if (!title) return { error: "invalid goal", status: 400 };
       const domainKey = str(g.domainKey, 30);
       const seasonId = str(g.seasonId, 50);
@@ -606,22 +821,19 @@ export function applyAction(state, body, user) {
         owner: user,
         title,
         icon: str(g.icon, 4) || "🎯",
-        type: GOAL_TYPES.includes(g.type) ? g.type : "daily",
         createdAt: today,
-        domainKey,
-        seasonId,
+        status: "active",
       };
-      if (goal.type === "milestone") {
-        goal.target = Math.max(1, int(g.target, 1));
-        goal.unit = str(g.unit, 10) || "개";
-        goal.deadline = str(g.deadline, 10);
-        goal.status = "active";
-      } else {
-        // 성실 시스템: 바쁜 날 붕괴를 막는 최소 버전 + 실행 신호(언제/어디서)
-        goal.minimumVersion = str(g.minimumVersion, 80);
-        goal.cue = str(g.cue, 60);
-      }
+      applyGoalFields(goal, { ...g, title, domainKey, seasonId }, { creating: true });
       state.goals.push(goal);
+      if ((goal.kind === "project" || goal.kind === "routine") && goal.seasonId && !state.lifeItems.some((item) => item.goalId === goal.id)) {
+        state.lifeItems.push({
+          id: newId("life"), owner: user, title: goal.title, kind: goal.kind,
+          domainKey: goal.domainKey, seasonId: goal.seasonId, goalId: goal.id,
+          doneDefinition: str(g.doneDefinition, 400), status: "active",
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+        });
+      }
       return {};
     }
 
@@ -629,8 +841,125 @@ export function applyAction(state, body, user) {
       const goal = findGoal(state, str(body.goalId, 40));
       if (!goal) return { noop: true };
       if (goal.owner !== user) return { error: "본인 목표만 수정할 수 있어요", status: 403 };
-      if ("minimumVersion" in body) goal.minimumVersion = str(body.minimumVersion, 80);
-      if ("cue" in body) goal.cue = str(body.cue, 60);
+      const input = body.goal && typeof body.goal === "object" ? body.goal : body;
+      const domainKey = input.domainKey === undefined ? goal.domainKey : str(input.domainKey, 30);
+      const seasonId = input.seasonId === undefined ? goal.seasonId : str(input.seasonId, 50);
+      if (domainKey && !LIFE_DOMAIN_KEYS.includes(domainKey)) return { error: "올바른 인생 영역을 선택해주세요", status: 400 };
+      if (seasonId && !state.seasons.some((season) => season.id === seasonId && season.owner === user)) {
+        return { error: "본인 시즌에만 연결할 수 있어요", status: 403 };
+      }
+      applyGoalFields(goal, { ...input, domainKey, seasonId });
+      if (!goal.title) return { error: "목표 이름을 적어주세요", status: 400 };
+      goal.updatedAt = new Date().toISOString();
+      const linked = state.lifeItems.find((item) => item.goalId === goal.id);
+      if (linked) {
+        linked.title = goal.title;
+        linked.kind = goal.kind === "milestone" ? linked.kind : goal.kind;
+        linked.domainKey = goal.domainKey;
+        linked.seasonId = goal.seasonId;
+        linked.status = goal.status;
+        linked.updatedAt = goal.updatedAt;
+      }
+      return {};
+    }
+
+    case "duplicateGoal": {
+      const original = findGoal(state, str(body.goalId, 40));
+      if (!original) return { noop: true };
+      if (original.owner !== user) return { error: "본인 목표만 복제할 수 있어요", status: 403 };
+      const copy = {
+        ...original,
+        id: newId("g"),
+        title: `${original.title} 복사본`,
+        status: "active",
+        createdAt: today,
+        updatedAt: new Date().toISOString(),
+        subtasks: (original.subtasks || []).map((task) => ({ ...task, id: newId("task"), done: false, completedAt: "" })),
+      };
+      delete copy.completedAt;
+      delete copy.failedAt;
+      state.goals.push(copy);
+      return {};
+    }
+
+    case "setGoalStatus": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      if (!goal) return { noop: true };
+      if (goal.owner !== user) return { error: "본인 목표만 수정할 수 있어요", status: 403 };
+      const status = str(body.status, 20);
+      if (!["active", "paused", "completed", "failed"].includes(status)) return { error: "올바른 상태가 아니에요", status: 400 };
+      goal.status = status;
+      goal.updatedAt = new Date().toISOString();
+      if (status === "completed") goal.completedAt = goal.completedAt || goal.updatedAt;
+      return {};
+    }
+
+    case "scheduleGoal": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      if (!goal) return { noop: true };
+      if (goal.owner !== user) return { error: "본인 목표만 옮길 수 있어요", status: 403 };
+      if (body.destination === "today") goal.scheduledDate = today;
+      if (body.destination === "week") goal.scheduledWeek = seoulWeekDates(today)[0];
+      goal.updatedAt = new Date().toISOString();
+      return {};
+    }
+
+    case "toggleSubtask": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      if (!goal) return { noop: true };
+      if (goal.owner !== user) return { error: "본인 프로젝트만 수정할 수 있어요", status: 403 };
+      const task = (goal.subtasks || []).find((item) => item.id === str(body.taskId, 50));
+      if (!task) return { noop: true };
+      task.done = body.done === true;
+      task.completedAt = task.done ? new Date().toISOString() : "";
+      goal.updatedAt = new Date().toISOString();
+      if (goal.subtasks.length > 0 && goal.subtasks.every((item) => item.done)) goal.completionSuggested = true;
+      else goal.completionSuggested = false;
+      return {};
+    }
+
+    case "scheduleSubtask": {
+      const goal = findGoal(state, str(body.goalId, 40));
+      if (!goal) return { noop: true };
+      if (goal.owner !== user) return { error: "본인 프로젝트만 수정할 수 있어요", status: 403 };
+      const task = (goal.subtasks || []).find((item) => item.id === str(body.taskId, 50));
+      if (!task) return { noop: true };
+      if (body.destination === "today") task.scheduledDate = today;
+      if (body.destination === "week") task.scheduledWeek = seoulWeekDates(today)[0];
+      goal.updatedAt = new Date().toISOString();
+      return {};
+    }
+
+    case "setKpi": {
+      const raw = body.kpi || {};
+      const id = str(raw.id, 50);
+      const title = str(raw.title, 100);
+      if (!title) return { error: "지표 이름을 적어주세요", status: 400 };
+      const type = KPI_TYPES.includes(raw.type) ? raw.type : "number";
+      const seasonId = str(raw.seasonId, 50);
+      const existing = id ? state.kpis.find((item) => item.id === id && item.owner === user) : null;
+      const record = {
+        id: existing?.id || newId("kpi"), owner: user, title, type,
+        unit: str(raw.unit, 16), formula: str(raw.formula, 200), seasonId,
+        entries: existing?.entries || [], createdAt: existing?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      if (existing) Object.assign(existing, record);
+      else state.kpis.push(record);
+      return {};
+    }
+
+    case "recordKpi": {
+      const kpi = state.kpis.find((item) => item.id === str(body.kpiId, 50));
+      if (!kpi) return { noop: true };
+      if (kpi.owner !== user) return { error: "본인 지표만 기록할 수 있어요", status: 403 };
+      const weekStart = cleanDate(body.weekStart) || seoulWeekDates(today)[0];
+      const value = str(body.value, 60);
+      const existing = kpi.entries.find((entry) => entry.weekStart === weekStart);
+      if (existing) Object.assign(existing, { value, updatedAt: new Date().toISOString() });
+      else kpi.entries.push({ id: newId("ke"), weekStart, value, createdAt: new Date().toISOString() });
+      kpi.entries = kpi.entries.slice(-52);
+      kpi.updatedAt = new Date().toISOString();
       return {};
     }
 
@@ -965,7 +1294,8 @@ export function handlePost(rawState, body) {
 
 // 아침 응원: 오늘 찍어야 할 매일 목표 수
 export function countTodayGoals(state, user) {
-  return state.goals.filter((g) => g.owner === user && g.type === "daily").length;
+  const today = seoulToday();
+  return state.goals.filter((g) => g.owner === user && g.type === "daily" && dueOn(g, today)).length;
 }
 
 // 밤 9시 리마인더: 아직 오늘 몫을 안 채운 매일 목표 수
@@ -975,8 +1305,26 @@ export function countMissedToday(state, user, today = seoulToday()) {
   for (const g of state.goals) {
     if (g.owner !== user) continue;
     if (g.type !== "daily") continue;
+    if (!dueOn(g, today)) continue;
     if (checked.has(`${g.id}_${today}`)) continue;
     missed++;
   }
   return missed;
+}
+
+function dueOn(goal, date) {
+  if (goal.status === "paused" || goal.status === "failed" || goal.status === "completed") return false;
+  if (goal.showOnBoard === false) return false;
+  if (goal.startDate && date < goal.startDate) return false;
+  if (goal.deadline && date > goal.deadline && goal.kind === "routine") return false;
+  if (goal.scheduledDate === date) return true;
+  const repeat = goal.repeatType || "daily";
+  if (repeat === "daily" || repeat === "weekly" || repeat === "monthly") return true;
+  if (repeat === "weekdays") {
+    const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
+    return (goal.repeatDays || []).map(Number).includes(dow);
+  }
+  if (repeat === "none") return goal.createdAt === date || goal.scheduledDate === date;
+  if (repeat === "custom") return (goal.customDates || []).includes(date);
+  return true;
 }
