@@ -848,6 +848,8 @@ export default function App() {
           onOpenReview={() => goToDesign("reflection")}
           onSaveKpi={saveKpi}
           onRecordKpi={recordKpi}
+          onCheer={cheerGoal}
+          onPoke={poke}
         />
       )}
 

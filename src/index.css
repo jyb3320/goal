@@ -5696,3 +5696,240 @@ button.hud-card {
     max-width: 150px;
   }
 }
+
+/* ---------- 둘이 공유하는 이번 주 ---------- */
+
+.week-people {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: -4px 0 14px;
+}
+
+.week-people > button {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 13px;
+  border: 1px solid #d8ccb8;
+  border-radius: 16px;
+  background: rgba(255, 252, 245, 0.78);
+  color: var(--ink);
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.week-people > button:hover {
+  transform: translateY(-2px);
+}
+
+.week-people > button.selected {
+  border-color: var(--stamp-red);
+  background: #fff5ec;
+  box-shadow: 0 0 0 2px rgba(181, 50, 40, 0.1);
+}
+
+.week-people img {
+  width: 46px;
+  height: 46px;
+  border: 3px solid white;
+  border-radius: 50% 44% 52% 46%;
+  object-fit: cover;
+  object-position: center 28%;
+  box-shadow: 0 4px 10px rgba(36, 31, 24, 0.18);
+}
+
+.week-people span {
+  min-width: 0;
+}
+
+.week-people strong,
+.week-people small {
+  display: block;
+}
+
+.week-people strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.week-people small {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.week-people b {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: #eee4d5;
+  color: #735a3b;
+  font-size: 12px;
+}
+
+.week-people > button.selected b {
+  background: var(--stamp-red);
+  color: white;
+}
+
+.week-people > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 13px;
+  border: 1px dashed #cfc0a8;
+  border-radius: 12px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-align: center;
+}
+
+.friend-week-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 13px;
+  padding: 13px 15px;
+  border: 1px solid rgba(46, 107, 94, 0.25);
+  border-radius: 15px;
+  background: linear-gradient(135deg, #e1eee8, #f7f0dd);
+}
+
+.friend-week-banner strong,
+.friend-week-banner span {
+  display: block;
+}
+
+.friend-week-banner strong {
+  font-size: 14px;
+}
+
+.friend-week-banner span {
+  margin-top: 3px;
+  color: #5f685c;
+  font-size: 10px;
+}
+
+.friend-week-banner button,
+.friend-week-actions button {
+  border: 0;
+  border-radius: 11px;
+  padding: 10px 12px;
+  background: var(--teal);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.friend-week-view .commitments article > button:first-child:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.friend-week-view .week-progress {
+  margin-top: 7px;
+}
+
+.friend-kpi-value {
+  align-self: center;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: #eee5d6;
+  color: #5f513f;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.friend-review-card {
+  grid-column: 1 / -1;
+}
+
+.friend-review-card > header > b {
+  color: var(--teal);
+  font-size: 11px;
+}
+
+.friend-review-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.friend-review-card dl > div {
+  padding: 11px;
+  border-radius: 11px;
+  background: #f1eadd;
+}
+
+.friend-review-card dt {
+  margin-bottom: 5px;
+  color: #846d4e;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.friend-review-card dd {
+  margin: 0;
+  color: #3e352a;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.friend-week-actions {
+  margin-top: 12px;
+}
+
+.friend-week-actions button {
+  width: 100%;
+  padding: 15px;
+  background: var(--stamp-red);
+}
+
+@media (max-width: 640px) {
+  .week-people {
+    gap: 7px;
+  }
+
+  .week-people > button {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .week-people img {
+    width: 38px;
+    height: 38px;
+  }
+
+  .week-people b {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 5px;
+    border-radius: 999px;
+    color: transparent;
+    font-size: 0;
+  }
+
+  .friend-week-banner {
+    align-items: flex-start;
+  }
+
+  .friend-week-banner button {
+    flex: 0 0 auto;
+    padding: 9px;
+    font-size: 10px;
+  }
+
+  .friend-review-card dl {
+    grid-template-columns: 1fr;
+  }
+}
