@@ -5938,36 +5938,54 @@ button.hud-card {
    Premium visual system — quiet luxury, warm and private
    ========================================================== */
 
+/* ---------- 통합 팔레트: 등불에 비친 한지 ----------
+   마을 히어로의 밤하늘(먹빛 남색)에서 종이로 이어지는 하나의 세계.
+   먹빛 남색 잉크 + 단청 광물 안료(주홍·청록·황금) + 등불빛 한지. */
 :root {
-  --paper: #f2f0eb;
-  --paper-deep: #e8e5de;
-  --paper-card: #fcfbf8;
-  --paper-soft: #ffffff;
-  --ink: #191a17;
-  --ink-soft: #706f69;
-  --stamp-red: #7e2632;
-  --stamp-red-deep: #5e1722;
-  --teal: #355f56;
-  --teal-soft: #e3ece8;
-  --line: #dedbd3;
-  --line-strong: #c7c1b7;
-  --gold: #98784b;
-  --red: #7e2632;
-  --red-deep: #5e1722;
-  --shadow: 0 24px 70px rgba(25, 26, 23, 0.09);
-  --shadow-soft: 0 10px 30px rgba(25, 26, 23, 0.06);
+  /* 밤 — 마을 하늘과 어두운 표면 */
+  --night: #141936;
+  --night-2: #1e244a;
+  --night-line: rgba(240, 233, 214, 0.14);
+
+  /* 한지 — 등불빛이 도는 따뜻한 종이 (회색 아님) */
+  --paper: #f4ecd8;
+  --paper-deep: #e8dcbb;
+  --paper-card: #fbf5e7;
+  --paper-soft: #fffdf6;
+
+  /* 먹 — 남색이 도는 잉크, 밤하늘과 같은 계열 */
+  --ink: #1d2138;
+  --ink-soft: #6d6a7d;
+
+  /* 주홍(朱紅) — 인장의 광물 안료 */
+  --stamp-red: #c03a2b;
+  --stamp-red-deep: #94271b;
+  --red: #c03a2b;
+  --red-deep: #94271b;
+
+  /* 청록(靑綠) · 황금(黃金) */
+  --teal: #2f8577;
+  --teal-soft: #dcece6;
+  --gold: #b0812e;
+  --gold-lit: #e0ab4c;
+
+  --line: #ddcfa8;
+  --line-strong: #c2ad7c;
+
+  --shadow: 0 24px 70px rgba(20, 25, 54, 0.16);
+  --shadow-soft: 0 10px 30px rgba(20, 25, 54, 0.1);
   --radius: 18px;
 }
 
 ::selection {
-  background: rgba(126, 38, 50, 0.18);
+  background: rgba(192, 58, 43, 0.18);
 }
 
 body {
   background:
-    radial-gradient(circle at 12% -5%, rgba(126, 38, 50, 0.08), transparent 28rem),
-    radial-gradient(circle at 88% 10%, rgba(53, 95, 86, 0.07), transparent 32rem),
-    #f2f0eb;
+    radial-gradient(circle at 12% -5%, rgba(192, 58, 43, 0.07), transparent 28rem),
+    radial-gradient(circle at 88% 10%, rgba(47, 133, 119, 0.07), transparent 32rem),
+    var(--paper);
   background-attachment: fixed;
   letter-spacing: -0.012em;
 }
@@ -5992,9 +6010,9 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-  border-color: rgba(53, 95, 86, 0.72) !important;
+  border-color: rgba(47, 133, 119, 0.72) !important;
   background: white !important;
-  box-shadow: 0 0 0 4px rgba(53, 95, 86, 0.09);
+  box-shadow: 0 0 0 4px rgba(47, 133, 119, 0.09);
   outline: none;
 }
 
@@ -6041,7 +6059,7 @@ select:focus {
 
 .masthead .who {
   padding: 9px 12px;
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.58);
   box-shadow: none;
@@ -6066,16 +6084,16 @@ select:focus {
   min-height: 62px;
   margin: 0 0 14px;
   padding: 8px 10px 8px 13px;
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 16px;
   background: rgba(252, 251, 248, 0.72);
-  box-shadow: 0 8px 24px rgba(25, 26, 23, 0.045);
+  box-shadow: 0 8px 24px rgba(20, 25, 54, 0.045);
   backdrop-filter: blur(16px);
 }
 
 .photo-bubble {
   border-color: #fff;
-  box-shadow: 0 4px 12px rgba(25, 26, 23, 0.14);
+  box-shadow: 0 4px 12px rgba(20, 25, 54, 0.14);
 }
 
 .photo-duo-copy strong {
@@ -6090,7 +6108,7 @@ select:focus {
 
 .chaos-trigger {
   padding: 8px 12px;
-  border: 1px solid rgba(25, 26, 23, 0.12);
+  border: 1px solid rgba(20, 25, 54, 0.12);
   background: #242520;
   box-shadow: none;
   font-size: 10px;
@@ -6107,10 +6125,10 @@ select:focus {
   gap: 3px;
   margin-bottom: 22px;
   padding: 5px;
-  border: 1px solid rgba(25, 26, 23, 0.1);
+  border: 1px solid rgba(20, 25, 54, 0.1);
   border-radius: 17px;
   background: rgba(244, 242, 237, 0.86);
-  box-shadow: 0 12px 32px rgba(25, 26, 23, 0.09);
+  box-shadow: 0 12px 32px rgba(20, 25, 54, 0.09);
   backdrop-filter: blur(20px) saturate(1.2);
 }
 
@@ -6132,7 +6150,7 @@ select:focus {
   border-color: #23241f;
   background: #23241f;
   color: #fff;
-  box-shadow: 0 7px 18px rgba(25, 26, 23, 0.19);
+  box-shadow: 0 7px 18px rgba(20, 25, 54, 0.19);
 }
 
 .view-tabs button.active > span:first-child {
@@ -6150,7 +6168,7 @@ select:focus {
     radial-gradient(circle at 88% 15%, rgba(183, 150, 101, 0.18), transparent 26%),
     linear-gradient(135deg, #20211e, #30312c);
   color: #f8f6f0;
-  box-shadow: 0 24px 60px rgba(25, 26, 23, 0.19);
+  box-shadow: 0 24px 60px rgba(20, 25, 54, 0.19);
 }
 
 .board-head::after {
@@ -6214,7 +6232,7 @@ select:focus {
 }
 
 .cadence-prompt {
-  border: 1px solid rgba(53, 95, 86, 0.15);
+  border: 1px solid rgba(47, 133, 119, 0.15);
   border-radius: 18px;
   background: #edf2ef;
   box-shadow: none;
@@ -6225,7 +6243,7 @@ select:focus {
 .history,
 .memo-panel,
 .message-board {
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 22px;
   background: rgba(252, 251, 248, 0.88);
   box-shadow: var(--shadow-soft);
@@ -6234,13 +6252,13 @@ select:focus {
 .big-goals {
   padding: 22px;
   background:
-    linear-gradient(120deg, rgba(53, 95, 86, 0.08), transparent 42%),
+    linear-gradient(120deg, rgba(47, 133, 119, 0.08), transparent 42%),
     rgba(252, 251, 248, 0.92);
 }
 
 .big-goals::after {
   right: 24px;
-  color: rgba(53, 95, 86, 0.045);
+  color: rgba(47, 133, 119, 0.045);
 }
 
 .big-goals-head h3,
@@ -6251,7 +6269,7 @@ select:focus {
 }
 
 .big-goal-card {
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.7);
 }
@@ -6275,12 +6293,12 @@ select:focus {
 
 .column-head {
   padding-bottom: 13px;
-  border-bottom-color: rgba(25, 26, 23, 0.08);
+  border-bottom-color: rgba(20, 25, 54, 0.08);
 }
 
 .column-head .tag {
-  border-color: rgba(25, 26, 23, 0.08);
-  background: #f2f0eb;
+  border-color: rgba(20, 25, 54, 0.08);
+  background: var(--paper);
 }
 
 .goal-list {
@@ -6289,15 +6307,15 @@ select:focus {
 
 .goal-card {
   padding: 18px;
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 8px 24px rgba(25, 26, 23, 0.055);
+  box-shadow: 0 8px 24px rgba(20, 25, 54, 0.055);
 }
 
 .goal-card:hover {
-  border-color: rgba(25, 26, 23, 0.16);
-  box-shadow: 0 16px 36px rgba(25, 26, 23, 0.085);
+  border-color: rgba(20, 25, 54, 0.16);
+  box-shadow: 0 16px 36px rgba(20, 25, 54, 0.085);
   transform: translateY(-2px);
 }
 
@@ -6311,19 +6329,19 @@ select:focus {
   width: 34px;
   height: 34px;
   border-radius: 11px;
-  background: #f0eee8;
+  background: var(--paper-deep);
 }
 
 .goal-menu-trigger {
-  border: 1px solid rgba(25, 26, 23, 0.08);
-  background: #f2f0eb;
+  border: 1px solid rgba(20, 25, 54, 0.08);
+  background: var(--paper);
 }
 
 .goal-menu-popover {
-  border-color: rgba(25, 26, 23, 0.1);
+  border-color: rgba(20, 25, 54, 0.1);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.98);
-  box-shadow: 0 20px 55px rgba(25, 26, 23, 0.18);
+  box-shadow: 0 20px 55px rgba(20, 25, 54, 0.18);
 }
 
 .goal-schedule-line,
@@ -6344,7 +6362,7 @@ select:focus {
 
 .stamp-circle.filled {
   background: var(--stamp-red);
-  box-shadow: 0 5px 13px rgba(126, 38, 50, 0.22);
+  box-shadow: 0 5px 13px rgba(192, 58, 43, 0.22);
 }
 
 .min-row {
@@ -6353,7 +6371,7 @@ select:focus {
 }
 
 .project-task-list li {
-  border-top-color: rgba(25, 26, 23, 0.07);
+  border-top-color: rgba(20, 25, 54, 0.07);
 }
 
 .milestone-bar,
@@ -6375,7 +6393,7 @@ select:focus {
   background:
     radial-gradient(circle at 88% 14%, rgba(183, 150, 101, 0.18), transparent 28%),
     linear-gradient(135deg, #242520, #383934);
-  box-shadow: 0 22px 54px rgba(25, 26, 23, 0.15);
+  box-shadow: 0 22px 54px rgba(20, 25, 54, 0.15);
 }
 
 .week-hero h2 {
@@ -6397,9 +6415,9 @@ select:focus {
 
 .week-people > button,
 .week-card {
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   background: rgba(252, 251, 248, 0.9);
-  box-shadow: 0 8px 24px rgba(25, 26, 23, 0.045);
+  box-shadow: 0 8px 24px rgba(20, 25, 54, 0.045);
 }
 
 .week-people > button {
@@ -6407,9 +6425,9 @@ select:focus {
 }
 
 .week-people > button.selected {
-  border-color: rgba(126, 38, 50, 0.34);
+  border-color: rgba(192, 58, 43, 0.34);
   background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(126, 38, 50, 0.12), 0 10px 30px rgba(25, 26, 23, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(192, 58, 43, 0.12), 0 10px 30px rgba(20, 25, 54, 0.06);
 }
 
 .week-card {
@@ -6424,11 +6442,11 @@ select:focus {
 }
 
 .week-card article {
-  border-top-color: rgba(25, 26, 23, 0.07);
+  border-top-color: rgba(20, 25, 54, 0.07);
 }
 
 .friend-week-banner {
-  border-color: rgba(53, 95, 86, 0.12);
+  border-color: rgba(47, 133, 119, 0.12);
   background: #e9efec;
 }
 
@@ -6440,7 +6458,7 @@ select:focus {
     radial-gradient(circle at 90% 20%, rgba(183, 150, 101, 0.16), transparent 28%),
     linear-gradient(135deg, #20211e, #32332e);
   color: #fff;
-  box-shadow: 0 22px 54px rgba(25, 26, 23, 0.15);
+  box-shadow: 0 22px 54px rgba(20, 25, 54, 0.15);
 }
 
 .design-intro .eyebrow {
@@ -6463,7 +6481,7 @@ select:focus {
 .section-switch,
 .reflection-tabs {
   padding: 4px;
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 15px;
   background: rgba(252, 251, 248, 0.84);
 }
@@ -6490,7 +6508,7 @@ select:focus {
   padding: 32px;
   border: 0;
   border-radius: 28px;
-  box-shadow: 0 22px 54px rgba(25, 26, 23, 0.16);
+  box-shadow: 0 22px 54px rgba(20, 25, 54, 0.16);
 }
 
 .life-hero::before {
@@ -6526,10 +6544,10 @@ select:focus {
 .ai-report,
 .ai-draft,
 .ai-workbench {
-  border: 1px solid rgba(25, 26, 23, 0.08) !important;
+  border: 1px solid rgba(20, 25, 54, 0.08) !important;
   border-radius: 20px !important;
   background: rgba(252, 251, 248, 0.92) !important;
-  box-shadow: 0 10px 30px rgba(25, 26, 23, 0.045) !important;
+  box-shadow: 0 10px 30px rgba(20, 25, 54, 0.045) !important;
 }
 
 .domain-grid > button,
@@ -6538,14 +6556,14 @@ select:focus {
 .review-auto-summary div,
 .season-routine-settings,
 .season-auto-create {
-  border-color: rgba(25, 26, 23, 0.08) !important;
+  border-color: rgba(20, 25, 54, 0.08) !important;
   border-radius: 15px !important;
   background: #f1efea !important;
 }
 
 .ai-hero {
   border-radius: 28px;
-  box-shadow: 0 22px 54px rgba(25, 26, 23, 0.15);
+  box-shadow: 0 22px 54px rgba(20, 25, 54, 0.15);
 }
 
 .history {
@@ -6554,7 +6572,7 @@ select:focus {
 
 .history-who {
   padding: 3px;
-  border-color: rgba(25, 26, 23, 0.08);
+  border-color: rgba(20, 25, 54, 0.08);
   border-radius: 13px;
   background: #efede7;
 }
@@ -6581,10 +6599,10 @@ select:focus {
 .history-note,
 .village-panel,
 .goal-sheet {
-  border: 1px solid rgba(25, 26, 23, 0.09);
+  border: 1px solid rgba(20, 25, 54, 0.09);
   border-radius: 24px;
-  background: #fcfbf8;
-  box-shadow: 0 30px 90px rgba(25, 26, 23, 0.22);
+  background: var(--paper-card);
+  box-shadow: 0 30px 90px rgba(20, 25, 54, 0.22);
 }
 
 .goal-sheet-backdrop,
@@ -6595,11 +6613,11 @@ select:focus {
 }
 
 .goal-sheet-head {
-  border-bottom-color: rgba(25, 26, 23, 0.07);
+  border-bottom-color: rgba(20, 25, 54, 0.07);
 }
 
 .goal-stepper > span {
-  background: #e8e5de;
+  background: var(--paper-deep);
 }
 
 .goal-stepper > span.active {
@@ -6618,15 +6636,15 @@ select:focus {
 .empty-note,
 .life-empty,
 .mini-empty {
-  border-color: rgba(25, 26, 23, 0.12);
+  border-color: rgba(20, 25, 54, 0.12);
   border-radius: 14px;
   background: rgba(242, 240, 235, 0.7);
 }
 
 .gate {
   background:
-    radial-gradient(circle at 15% 10%, rgba(126, 38, 50, 0.09), transparent 28rem),
-    radial-gradient(circle at 88% 90%, rgba(53, 95, 86, 0.1), transparent 30rem),
+    radial-gradient(circle at 15% 10%, rgba(192, 58, 43, 0.09), transparent 28rem),
+    radial-gradient(circle at 88% 90%, rgba(47, 133, 119, 0.1), transparent 30rem),
     #efede7;
 }
 
@@ -6637,9 +6655,9 @@ select:focus {
 
 .gate-panel,
 .gate-card {
-  border: 1px solid rgba(25, 26, 23, 0.08);
+  border: 1px solid rgba(20, 25, 54, 0.08);
   border-radius: 28px;
-  box-shadow: 0 35px 100px rgba(25, 26, 23, 0.13);
+  box-shadow: 0 35px 100px rgba(20, 25, 54, 0.13);
 }
 
 .gate-panel {

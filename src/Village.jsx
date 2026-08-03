@@ -9,6 +9,7 @@ import {
 } from "./lib/xp.js";
 import { VILLAGE_ID } from "../shared/xp-config.js";
 import { buildVillageStatus } from "./lib/village.js";
+import { skyPhase } from "./lib/sky.js";
 import VillagePanel from "./components/VillagePanel.jsx";
 
 // ---------- 월드 상수 ----------
@@ -23,21 +24,31 @@ const GARDEN = { x: 255, y: 620 };
 const ARCHIVE = { x: 1110, y: 650 };
 const MAX_DECOR = 400;
 
+// 단청 광물 안료 — 오늘 화면 히어로와 같은 팔레트
 const C = {
   ground: "#e6dbb8",
-  groundDot: "rgba(36,31,24,0.045)",
+  groundDot: "rgba(20,25,54,0.05)",
   path: "#d9cba0",
-  pond: "#8db8ae",
-  pondIn: "#a8ccc3",
-  ink: "#241f18",
-  red: "#b53228",
-  redDeep: "#8a241d",
-  teal: "#2e6b5e",
-  gold: "#d9a94a",
-  goldDeep: "#a97a24",
-  green: "#4a8f61",
-  greenDeep: "#2e6b5e",
-  paper: "#f8f2e2",
+  pond: "#4f9e93",
+  pondIn: "#7cc0b5",
+  ink: "#1d2138",
+  red: "#c03a2b",
+  redDeep: "#94271b",
+  teal: "#2f8577",
+  gold: "#e0ab4c",
+  goldDeep: "#b0812e",
+  green: "#4a9b6c",
+  greenDeep: "#2f7d5c",
+  paper: "#fbf5e7",
+};
+
+// 시간대별 마을 공기 — 히어로와 같은 하늘 아래 있게 한다.
+// 밝은 바닥에 어두운 막을 씌우면 탁해지므로 바닥색 자체를 바꾼다.
+const PHASE_AIR = {
+  dawn: { ground: "#b8ab93", path: "#a2947c", dot: "rgba(20,25,54,0.06)", tint: "rgba(96,74,122,0.16)", firefly: 0.35 },
+  day: { ground: "#e6dbb8", path: "#d9cba0", dot: "rgba(20,25,54,0.05)", tint: "rgba(255,244,214,0.05)", firefly: 0 },
+  dusk: { ground: "#9c8163", path: "#8a7053", dot: "rgba(20,25,54,0.08)", tint: "rgba(150,74,46,0.2)", firefly: 0.7 },
+  night: { ground: "#2b3350", path: "#39405c", dot: "rgba(240,233,214,0.05)", tint: "rgba(20,25,54,0.28)", firefly: 1 },
 };
 
 function mulberry32(seed) {
@@ -586,9 +597,13 @@ export default function Village({
         ctx.closePath();
         ctx.fill();
       }
-      ctx.fillStyle = "rgba(36,31,24,0.65)";
-      ctx.font = '11px "JetBrains Mono", monospace';
+      // 밤 바닥에서도 읽히게 밝은 테두리 + 진한 글씨
+      ctx.font = '11px "Noto Sans KR", sans-serif';
       ctx.textAlign = "center";
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(251,245,231,0.92)";
+      ctx.strokeText(label, 0, 60);
+      ctx.fillStyle = "rgba(29,33,56,0.85)";
       ctx.fillText(label, 0, 60);
       ctx.restore();
     }
@@ -920,10 +935,10 @@ export default function Village({
       }
       ctx.restore();
       // 이름표
-      ctx.font = '11px "JetBrains Mono", monospace';
+      ctx.font = '11px "Noto Sans KR", sans-serif';
       ctx.textAlign = "center";
       ctx.lineWidth = 3;
-      ctx.strokeStyle = "rgba(248,242,226,0.9)";
+      ctx.strokeStyle = "rgba(251,245,231,0.92)";
       const label = `Lv.${level} ${name}`;
       ctx.strokeText(label, x, y - 48 + bob);
       ctx.fillStyle = C.ink;
@@ -958,10 +973,11 @@ export default function Village({
       ctx.save();
       ctx.translate(-cam.x, -cam.y);
 
-      // 바닥
-      ctx.fillStyle = C.ground;
+      // 바닥 — 지금 시각의 땅빛
+      const air = PHASE_AIR[skyPhase().key] || PHASE_AIR.night;
+      ctx.fillStyle = air.ground;
       ctx.fillRect(0, 0, WORLD_W, WORLD_H);
-      ctx.fillStyle = C.groundDot;
+      ctx.fillStyle = air.dot;
       for (let gx = 40; gx < WORLD_W; gx += 90) {
         for (let gy = 40; gy < WORLD_H; gy += 90) {
           const r = mulberry32(gx * 31 + gy);
@@ -976,7 +992,7 @@ export default function Village({
       ctx.strokeRect(12, 12, WORLD_W - 24, WORLD_H - 24);
 
       // 길
-      ctx.strokeStyle = C.path;
+      ctx.strokeStyle = air.path;
       ctx.lineWidth = 26;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -1061,12 +1077,10 @@ export default function Village({
 
       ctx.restore();
 
-      // 밤: 어두운 오버레이 + 반딧불이
-      const hour = new Date().getHours();
-      const night = hour >= 20 || hour < 6;
-      if (night) {
-        ctx.fillStyle = "rgba(24,32,58,0.30)";
-        ctx.fillRect(0, 0, vw, vh);
+      // 시간대별 공기 — 오늘 화면 히어로와 같은 하늘 아래
+      ctx.fillStyle = air.tint;
+      ctx.fillRect(0, 0, vw, vh);
+      if (air.firefly > 0) {
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
         for (let i = 0; i < 12; i++) {
@@ -1074,7 +1088,7 @@ export default function Village({
           const fx = ((r() * WORLD_W + Math.sin(t * 0.6 + i) * 60 - cam.x) % (vw + 80)) - 40;
           const fy = ((r() * WORLD_H + Math.cos(t * 0.5 + i * 2) * 40 - cam.y) % (vh + 80)) - 40;
           const glow = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.4 + i * 1.7));
-          ctx.fillStyle = `rgba(255, 224, 130, ${0.5 * glow})`;
+          ctx.fillStyle = `rgba(246, 220, 130, ${0.5 * glow * air.firefly})`;
           ctx.beginPath();
           ctx.arc(fx, fy, 2 + glow * 1.5, 0, Math.PI * 2);
           ctx.fill();
