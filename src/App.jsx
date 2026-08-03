@@ -12,6 +12,7 @@ import WeekSummary from "./components/WeekSummary.jsx";
 import HistoryView from "./components/HistoryView.jsx";
 import GoalMemoPanel from "./components/GoalMemoPanel.jsx";
 import MissedPanel from "./components/MissedPanel.jsx";
+import VillageHero from "./components/VillageHero.jsx";
 import Toast from "./components/Toast.jsx";
 import BigGoalPanel from "./components/BigGoalPanel.jsx";
 import LifeCompass from "./components/LifeCompass.jsx";
@@ -384,6 +385,15 @@ export default function App() {
   const todayStampGoals = todayGoals.filter((g) => goalKind(g) !== "project");
   const todayDone = todayStampGoals.filter((g) => checkinSet.has(`${g.id}_${todayStr(0)}`)).length;
   const perfectToday = todayStampGoals.length > 0 && todayDone === todayStampGoals.length;
+
+  // 마을 히어로용 — 쌓인 도장(나무)과 친구의 오늘 기척
+  const myGoalIdSet = useMemo(() => new Set(myGoals.map((g) => g.id)), [myGoals]);
+  const friendActiveToday = useMemo(() => {
+    if (!otherName) return false;
+    const ids = new Set(state.goals.filter((g) => g.owner === otherName).map((g) => g.id));
+    const today = todayStr(0);
+    return state.checkins.some((c) => ids.has(c.goalId) && c.date === today);
+  }, [state.goals, state.checkins, otherName]);
 
   // 레벨업 축하 — 첫 로딩 때의 레벨은 기준선으로만 쓰고 축하하지 않음
   const levelRef = useRef(null);
@@ -954,34 +964,19 @@ export default function App() {
 
       {view === "board" && (
         <>
-          <section className="board-head" id="board-top">
-            <div className="board-head-top">
-              <div>
-                <p className="eyebrow">오늘의 도장판</p>
-                <h2>
-                  {perfectToday
-                    ? "오늘 몫은 다 찍었어요"
-                    : todayStampGoals.length > 0
-                      ? `오늘 ${todayStampGoals.length - todayDone}개 남았어요`
-                      : "첫 목표를 만들어볼까요"}
-                </h2>
-              </div>
-              <div className={`today-seal ${perfectToday ? "done" : ""}`} aria-label="오늘 진행">
-                <strong>
-                  {todayDone}
-                  <span>/{todayStampGoals.length}</span>
-                </strong>
-                <span className="today-seal-label">{perfectToday ? "완" : "오늘"}</span>
-              </div>
-            </div>
-            <button type="button" className="xp-line" onClick={() => setView("village")} title="마을 보러가기">
-              <span className="hud-lv">Lv.{myLevel}</span>
-              <div className="hud-board-xp">
-                <div className="hud-board-fill" style={{ width: `${xpPct}%` }} />
-              </div>
-              <span className="xp-line-meta">다음 레벨까지 {xpNeed - (myXP - xpBase)} XP · 마을 →</span>
-            </button>
-          </section>
+          <VillageHero
+            me={me}
+            otherName={otherName}
+            done={todayDone}
+            total={todayStampGoals.length}
+            perfect={perfectToday}
+            level={myLevel}
+            xpPct={xpPct}
+            xpLeft={xpNeed - (myXP - xpBase)}
+            treeCount={state.checkins.filter((c) => myGoalIdSet.has(c.goalId)).length}
+            friendActiveToday={friendActiveToday}
+            onEnterVillage={() => setView("village")}
+          />
 
           {cadencePrompt && cadencePrompt.key !== dismissedCadence && (
             <div className="cadence-prompt">
