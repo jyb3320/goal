@@ -1,4 +1,4 @@
-import { DOW, todayStr, weekDates } from "./dates.js";
+import { DOW, todayStr, weekDatesOf } from "./dates.js";
 
 export const REPEAT_TYPES = [
   ["daily", "매일"],
@@ -89,7 +89,7 @@ export function repeatLabel(goal) {
 }
 
 export function weekProgress(goal, checkins = [], dateStr = todayStr(0)) {
-  const days = weekDates(0);
+  const days = weekDatesOf(dateStr);
   const count = checkins.filter((item) => item.goalId === goal.id && days.includes(item.date)).length;
   const repeat = repeatTypeOf(goal);
   let target = 1;

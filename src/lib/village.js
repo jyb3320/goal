@@ -1,4 +1,4 @@
-import { computeStreak, ddayLabel, todayStr, weekDates } from "./dates.js";
+import { computeStreak, ddayLabel, todayStr, weekDatesOf } from "./dates.js";
 import { computeXP, levelOf } from "./xp.js";
 
 const isVisibleGoal = (goal) => goal.status !== "failed";
@@ -124,8 +124,8 @@ function mailboxEvents(state, me, otherName) {
 
 export function buildVillageStatus(state, me, otherName, today = todayStr(0)) {
   const checkinSet = new Set(state.checkins.map((item) => `${item.goalId}_${item.date}`));
-  const currentWeek = weekDates(0);
-  const previousWeek = weekDates(-1);
+  const currentWeek = weekDatesOf(today, 0);
+  const previousWeek = weekDatesOf(today, -1);
   const mine = userStatus(me, state, today, currentWeek, previousWeek, checkinSet);
   const friend = userStatus(otherName, state, today, currentWeek, previousWeek, checkinSet);
   const bothActiveDays = currentWeek.filter((date) => {

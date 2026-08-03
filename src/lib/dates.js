@@ -43,6 +43,20 @@ export function weekDates(offsetWeeks = 0) {
   return days;
 }
 
+// 주어진 날짜가 속한 (월요일 시작) 주의 7일. offsetWeeks로 주 단위 이동.
+// 인자를 안 주면 오늘 기준 — weekDates(offset)와 동일하게 동작한다.
+export function weekDatesOf(dateStr = todayStr(0), offsetWeeks = 0) {
+  const d = new Date(`${dateStr}T00:00:00`);
+  const dow = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - dow + offsetWeeks * 7);
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    days.push(fmtDate(d));
+    d.setDate(d.getDate() + 1);
+  }
+  return days;
+}
+
 export function computeStreak(goalId, checkinSet) {
   let streak = 0;
   let cursor = 0;
