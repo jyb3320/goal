@@ -73,11 +73,7 @@ export default function GoalMenu({ goal, onEdit, onAction, onDelete }) {
       }}
     >
       <button type="button" role="menuitem" onClick={() => choose("edit")}>수정</button>
-      <button type="button" role="menuitem" onClick={() => choose("today")}>오늘로 보내기</button>
-      <button type="button" role="menuitem" onClick={() => choose("week")}>이번 주로 보내기</button>
-      <button type="button" role="menuitem" onClick={() => choose("duplicate")}>복제</button>
       <button type="button" role="menuitem" onClick={() => choose(goal.status === "paused" ? "resume" : "pause")}>{goal.status === "paused" ? "다시 시작" : "일시정지"}</button>
-      <button type="button" role="menuitem" onClick={() => choose("complete")}>완료</button>
       <button type="button" role="menuitem" className="danger" onClick={() => choose("delete")}>삭제</button>
     </div>,
     document.body
