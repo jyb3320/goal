@@ -15,7 +15,6 @@ import MissedPanel from "./components/MissedPanel.jsx";
 import VillageHero from "./components/VillageHero.jsx";
 import Toast from "./components/Toast.jsx";
 import BigGoalPanel from "./components/BigGoalPanel.jsx";
-import LifeCompass from "./components/LifeCompass.jsx";
 import SeasonBoard from "./components/SeasonBoard.jsx";
 import ReflectionHub from "./components/ReflectionHub.jsx";
 import AIAdvisor from "./components/AIAdvisor.jsx";
@@ -64,7 +63,7 @@ function pickState(data) {
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
   const [view, setView] = useState("board"); // board | week | design | history | village
-  const [designTab, setDesignTab] = useState("compass"); // 설계실 내부: compass | season | reflection | advisor
+  const [designTab, setDesignTab] = useState("season"); // 설계실 내부: season | reflection | advisor
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
   const [state, setState] = useState(EMPTY_STATE);
@@ -544,12 +543,6 @@ export default function App() {
   const saveBigGoal = (text) =>
     mutate({ action: "setBigGoal", text });
 
-  const saveLifeProfile = (profile) =>
-    mutate({ action: "setLifeProfile", profile });
-
-  const saveLifeDomain = (domain) =>
-    mutate({ action: "setLifeDomain", domain });
-
   const saveSeason = async (season) => {
     const ok = await mutate({ action: "setSeason", season });
     if (ok) showToast("12주 시즌이 저장되었습니다.");
@@ -871,13 +864,10 @@ export default function App() {
         <div className="design-room">
           <div className="design-intro">
             <p className="eyebrow">인생 설계실</p>
-            <h2>가끔 들러 방향을 손보는 곳</h2>
-            <p className="design-sub">매일 올 필요는 없어요. 삶의 방향과 12주 계획을 정하고, 주기가 되면 복기하고, 막힐 땐 AI 참모에게 물어보세요.</p>
+            <h2>계획을 세우고 실행을 돌아보는 곳</h2>
+            <p className="design-sub">12주 계획을 정하고, 주기가 되면 복기하고, 막힐 땐 AI 참모에게 물어보세요.</p>
           </div>
           <div className="design-subnav" role="tablist" aria-label="설계실 메뉴">
-            <button type="button" role="tab" aria-selected={designTab === "compass"} className={designTab === "compass" ? "active" : ""} onClick={() => setDesignTab("compass")}>
-              <span>北</span> 나침반
-            </button>
             <button type="button" role="tab" aria-selected={designTab === "season"} className={designTab === "season" ? "active" : ""} onClick={() => setDesignTab("season")}>
               <span>旬</span> 12주
             </button>
@@ -888,16 +878,6 @@ export default function App() {
               <span>參</span> AI 참모
             </button>
           </div>
-
-          {designTab === "compass" && (
-            <LifeCompass
-              state={state}
-              me={me}
-              otherName={otherName}
-              onSaveProfile={saveLifeProfile}
-              onSaveDomain={saveLifeDomain}
-            />
-          )}
 
           {designTab === "season" && (
             <SeasonBoard
