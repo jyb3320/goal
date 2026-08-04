@@ -5447,6 +5447,34 @@ button.hud-card {
 .goal-menu-popover button { border: 0; border-radius: 8px; padding: 10px 11px; background: transparent; color: #41372b; text-align: left; }
 .goal-menu-popover button:hover { background: var(--paper-soft); }
 .goal-menu-popover .danger { color: #ad312b; }
+.goal-menu-portal {
+  position: fixed;
+  right: auto;
+  z-index: 10000;
+  width: 184px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-color: rgba(211, 188, 126, 0.62);
+  background: #202744;
+  box-shadow: 0 20px 55px rgba(4, 7, 19, 0.52);
+}
+
+.goal-menu-portal button {
+  width: 100%;
+  color: #f4ecd8;
+  cursor: pointer;
+}
+
+.goal-menu-portal button:hover,
+.goal-menu-portal button:focus-visible {
+  outline: none;
+  background: rgba(211, 188, 126, 0.16);
+  color: #fffaf0;
+}
+
+.goal-menu-portal .danger {
+  color: #ff9b8e;
+}
 .goal-top-actions { display: flex; align-items: center; gap: 7px; }
 .goal-schedule-line { margin: 5px 0 10px; color: #806d52; font-size: 12px; }
 .week-view { padding: 14px 0 40px; }
