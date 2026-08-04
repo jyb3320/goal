@@ -63,6 +63,105 @@ textarea:focus-visible {
   }
 }
 
+.weekly-review-archive {
+  margin-top: 18px;
+}
+
+.weekly-review-owner {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.weekly-review-owner button {
+  padding: 7px 13px;
+  border: 1px solid rgba(201, 181, 127, 0.58);
+  border-radius: 999px;
+  background: rgba(22, 29, 57, 0.66);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.weekly-review-owner button.selected {
+  border-color: rgba(202, 147, 76, 0.82);
+  background: rgba(154, 63, 48, 0.3);
+  color: var(--ink);
+}
+
+.weekly-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.weekly-review-list details {
+  border: 1px solid rgba(201, 181, 127, 0.42);
+  border-radius: var(--radius);
+  background: rgba(20, 27, 54, 0.52);
+  overflow: hidden;
+}
+
+.weekly-review-list summary {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr) 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.weekly-review-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.weekly-review-list summary span {
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.weekly-review-list summary strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-review-list summary i {
+  color: var(--ink-soft);
+  font-style: normal;
+  transition: transform 160ms ease;
+}
+
+.weekly-review-list details[open] summary i {
+  transform: rotate(180deg);
+}
+
+.weekly-review-list .review-read {
+  margin: 0 15px 15px;
+  border-top: 1px dashed rgba(201, 181, 127, 0.35);
+  padding-top: 12px;
+}
+
+@media (max-width: 620px) {
+  .weekly-review-list summary {
+    grid-template-columns: 1fr 18px;
+  }
+
+  .weekly-review-list summary strong {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .weekly-review-list summary i {
+    transition: none;
+  }
+}
+
 /* ---------- Shell ---------- */
 
 .shell {

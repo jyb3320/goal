@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { currentMonth } from "../lib/life.js";
-import { weekDates } from "../lib/dates.js";
+import { weekDates, weekDatesOf } from "../lib/dates.js";
+import { pastWeeklyReviews } from "../lib/reviews.js";
 
 const WEEK_FIELDS = [
   ["did", "1) 실제로 한 일은 무엇인가?", "완료한 행동과 진척을 사실대로 적기"],
@@ -10,6 +11,18 @@ const WEEK_FIELDS = [
   ["reduce", "5) 중단하거나 줄일 것은?", "덜어내야 할 일과 기준"],
   ["promises", "다음 주 약속 세 가지", "구체적이고 확인 가능한 약속"],
 ];
+
+const LEGACY_WEEK_FIELDS = [
+  ["facts", "실제로 있었던 일"],
+  ["wins", "잘한 선택"],
+  ["avoidance", "피하거나 미룬 일"],
+  ["timeMoney", "시간과 돈의 사용"],
+  ["worry", "지금 가장 신경 쓰이는 일"],
+  ["honestTalk", "솔직하게 나눌 이야기"],
+  ["priority", "다음 주 우선순위"],
+];
+
+const WEEK_HISTORY_FIELDS = [...WEEK_FIELDS, ...LEGACY_WEEK_FIELDS];
 
 const MONTH_FIELDS = [
   ["improvement", "실제로 나아진 것", "느낌이 아니라 달라진 행동과 결과"],
@@ -43,6 +56,47 @@ function ReviewForm({ fields, initial, periodKey, onSave, submitLabel }) {
 function ReviewRead({ review, fields, empty }) {
   if (!review) return <div className="life-empty">{empty}</div>;
   return <div className="review-read">{fields.filter(([key]) => review[key]).map(([key, label]) => <article key={key}><span>{label}</span><p>{review[key]}</p></article>)}</div>;
+}
+
+function WeeklyReviewArchive({ reviews, me, otherName, currentWeekStart }) {
+  const [owner, setOwner] = useState(me);
+  useEffect(() => setOwner(me), [me]);
+  const history = useMemo(
+    () => pastWeeklyReviews(reviews, owner, currentWeekStart),
+    [reviews, owner, currentWeekStart]
+  );
+
+  return (
+    <section className="life-paper weekly-review-archive">
+      <div className="life-section-head">
+        <div><span>冊</span><h3>지난 주간 복기</h3></div>
+        <p>지나간 주의 선택과 배움을 다시 펼쳐봅니다.</p>
+      </div>
+      <div className="weekly-review-owner" aria-label="복기 작성자 선택">
+        <button type="button" className={owner === me ? "selected" : ""} onClick={() => setOwner(me)}>내 기록</button>
+        {otherName && <button type="button" className={owner === otherName ? "selected" : ""} onClick={() => setOwner(otherName)}>{otherName} 기록</button>}
+      </div>
+      {history.length === 0 ? (
+        <div className="life-empty">아직 지나간 주간 복기가 없어요.</div>
+      ) : (
+        <div className="weekly-review-list">
+          {history.map((review, index) => {
+            const weekEnd = weekDatesOf(review.weekStart)[6];
+            return (
+              <details key={review.id || `${review.owner}-${review.weekStart}`} open={index === 0}>
+                <summary>
+                  <span>{review.weekStart.slice(5).replace("-", ".")} — {weekEnd.slice(5).replace("-", ".")}</span>
+                  <strong>{review.did || review.wins || review.facts || "기록한 복기 열기"}</strong>
+                  <i aria-hidden="true">⌄</i>
+                </summary>
+                <ReviewRead review={review} fields={WEEK_HISTORY_FIELDS} empty="기록 내용이 없어요." />
+              </details>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
 }
 
 function DecisionLog({ decisions, me, otherName, onAdd, onUpdate, onDelete }) {
@@ -147,6 +201,7 @@ export default function ReflectionHub({ state, me, otherName, onSaveWeekly, onSa
           <section className="life-paper"><div className="life-section-head"><div><span>週</span><h3>{me}의 이번 주</h3></div><p>{weekStart} 시작</p></div><div className="review-auto-summary"><div><span>계획 행동</span><strong>{weekStats.planned}</strong></div><div><span>완료 행동</span><strong>{weekStats.completed}</strong></div><div><span>준수율</span><strong>{weekStats.rate}%</strong></div><div><span>최소치 사용</span><strong>{weekStats.minimum}</strong></div><div><span>미완료</span><strong>{weekStats.unfinished}</strong></div></div><ReviewForm fields={WEEK_FIELDS} initial={myWeekly} periodKey={{ weekStart }} onSave={onSaveWeekly} submitLabel="이번 주 복기 저장" /></section>
           <section className="life-paper friend-review"><div className="life-section-head"><div><span>友</span><h3>{otherName || "친구"}의 최근 기록</h3></div></div><ReviewRead review={friendWeekly} fields={WEEK_FIELDS} empty={otherName ? "친구의 주간 기록을 기다리고 있어요." : "친구가 들어오면 기록이 보여요."} /></section>
         </div>
+        <WeeklyReviewArchive reviews={state.weeklyReviews} me={me} otherName={otherName} currentWeekStart={weekStart} />
       </>}
 
       {section === "monthly" && <div className="review-columns">
