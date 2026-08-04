@@ -44,6 +44,7 @@ export function emptyState() {
     monthlyReviews: [], // 월간·분기 방향 복기
     decisions: [], // 중요한 결정과 사후 결과
     kpis: [], // 주간 복기에서 기록하는 관찰 지표
+    completedGoals: [], // 현황판에서 지워도 기록관에 남기는 완료 기간 목표 스냅샷
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
     xpEvents: [], // 개인·마을 XP 원장. dedupeKey가 논리적 unique 제약 역할을 한다.
@@ -113,7 +114,7 @@ export function normalize(raw) {
   for (const key of [
     "users", "goals", "checkins", "progress", "reactions", "messages", "pokes",
     "excuses", "goalMemos", "bigGoals", "lifeProfiles", "lifeDomains", "seasons",
-    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "kpis", "xpEvents",
+    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "kpis", "completedGoals", "xpEvents",
   ]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
@@ -998,9 +999,18 @@ export function applyAction(state, body, user) {
       const goal = findGoal(state, str(body.goalId, 40));
       if (!goal) return { noop: true };
       if (goal.owner !== user) return { error: "본인 목표만 지울 수 있어요", status: 403 };
+      const preserveCompletion = goal.type === "milestone" && goal.status === "completed";
+      if (preserveCompletion && !state.completedGoals.some((item) => item.id === goal.id)) {
+        state.completedGoals.push({
+          ...goal,
+          archivedAt: new Date().toISOString(),
+        });
+      }
       state.goals = state.goals.filter((g) => g.id !== goal.id);
       state.checkins = state.checkins.filter((c) => c.goalId !== goal.id);
-      state.progress = state.progress.filter((p) => p.goalId !== goal.id);
+      if (!preserveCompletion) {
+        state.progress = state.progress.filter((p) => p.goalId !== goal.id);
+      }
       state.reactions = state.reactions.filter((r) => r.goalId !== goal.id);
       state.excuses = state.excuses.filter((x) => x.goalId !== goal.id);
       return {};

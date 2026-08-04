@@ -30,7 +30,7 @@ const EMPTY_STATE = {
   users: [], goals: [], checkins: [], progress: [], reactions: [], messages: [],
   pokes: [], excuses: [], goalMemos: [], bigGoals: [], lifeProfiles: [],
   lifeDomains: [], seasons: [], lifeItems: [], weeklyReviews: [],
-  monthlyReviews: [], decisions: [], xpEvents: [], xpVersion: 0, archive: {},
+  monthlyReviews: [], decisions: [], completedGoals: [], xpEvents: [], xpVersion: 0, archive: {},
   kpis: [],
 };
 
@@ -53,6 +53,7 @@ function pickState(data) {
     weeklyReviews: data.weeklyReviews || [],
     monthlyReviews: data.monthlyReviews || [],
     decisions: data.decisions || [],
+    completedGoals: data.completedGoals || [],
     kpis: data.kpis || [],
     xpEvents: data.xpEvents || [],
     xpVersion: data.xpVersion || 0,
@@ -430,8 +431,11 @@ export default function App() {
   };
 
   const deleteGoal = (goal) => {
+    const keepsCompletion = goal.type === "milestone" && goal.status === "completed";
     const ok = window.confirm(
-      `"${goal.title}" 목표를 지울까요? 쌓인 도장 기록도 같이 사라져요.`
+      keepsCompletion
+        ? `"${goal.title}" 목표를 현황판에서 지울까요? 달성 기록과 최종 수량은 기록에 남아요.`
+        : `"${goal.title}" 목표를 지울까요? 쌓인 도장 기록도 같이 사라져요.`
     );
     if (!ok) return;
     mutate({ action: "deleteGoal", goalId: goal.id });
@@ -953,7 +957,7 @@ export default function App() {
 
       {view === "history" && (
         <HistoryView
-          goals={state.goals}
+          goals={[...state.goals, ...state.completedGoals]}
           checkins={state.checkins}
           progress={state.progress}
           excuses={state.excuses}

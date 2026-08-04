@@ -172,6 +172,30 @@ describe("소유권과 날짜 검증", () => {
     expect(b.post({ action: "deleteGoal", name: "쥐", goalId: goal.id }).status).toBe(403);
   });
 
+  it("달성한 기간 목표를 삭제해도 목표 스냅샷과 진행 기록은 남긴다", () => {
+    const b = freshBoard();
+    b.post({ action: "join", name: "햄" });
+    b.post({ action: "join", name: "쥐" });
+    const added = b.post({
+      action: "addGoal",
+      name: "햄",
+      goal: { title: "책 2권 읽기", type: "milestone", target: 2, unit: "권" },
+    });
+    const goal = added.respond.goals.find((item) => item.title === "책 2권 읽기");
+    b.post({ action: "addProgress", name: "햄", goalId: goal.id, amount: 2 });
+
+    const deleted = b.post({ action: "deleteGoal", name: "햄", goalId: goal.id });
+
+    expect(deleted.respond.goals.some((item) => item.id === goal.id)).toBe(false);
+    expect(deleted.respond.completedGoals).toHaveLength(1);
+    expect(deleted.respond.completedGoals[0]).toMatchObject({
+      id: goal.id,
+      title: "책 2권 읽기",
+      status: "completed",
+    });
+    expect(deleted.respond.progress.filter((item) => item.goalId === goal.id)).toHaveLength(1);
+  });
+
   it("자기 목표에 응원 불가, 친구는 가능 (by는 서버가 강제)", () => {
     const { b, goal } = twoUsers();
     expect(
