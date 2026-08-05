@@ -19,6 +19,7 @@ import SeasonBoard from "./components/SeasonBoard.jsx";
 import ReflectionHub from "./components/ReflectionHub.jsx";
 import AIAdvisor from "./components/AIAdvisor.jsx";
 import WeekView from "./components/WeekView.jsx";
+import CalendarView from "./components/CalendarView.jsx";
 import ProjectGoalCard from "./components/ProjectGoalCard.jsx";
 import PhotoDuo from "./components/PhotoDuo.jsx";
 import { goalKind, isGoalDueOn } from "./lib/goals.js";
@@ -62,7 +63,7 @@ function pickState(data) {
 
 export default function App() {
   const [me, setMe] = useState(() => localStorage.getItem("sg_username") || "");
-  const [view, setView] = useState("board"); // board | week | design | history | village
+  const [view, setView] = useState("board"); // board | week | calendar | design | history | village
   const [designTab, setDesignTab] = useState("season"); // 설계실 내부: season | reflection | advisor
   const [nameInput, setNameInput] = useState("");
   const [gateError, setGateError] = useState("");
@@ -831,6 +832,9 @@ export default function App() {
         <button type="button" className={view === "week" ? "active" : ""} onClick={() => setView("week")}>
           <span>週</span> 이번 주
         </button>
+        <button type="button" className={view === "calendar" ? "active" : ""} onClick={() => setView("calendar")}>
+          <span>曆</span> 캘린더
+        </button>
         <button type="button" className={view === "design" ? "active" : ""} onClick={() => setView("design")}>
           <span>設</span> 설계실
         </button>
@@ -857,6 +861,16 @@ export default function App() {
           onRecordKpi={recordKpi}
           onCheer={cheerGoal}
           onPoke={poke}
+        />
+      )}
+
+      {view === "calendar" && (
+        <CalendarView
+          state={state}
+          me={me}
+          onAdd={() => setAdding(true)}
+          onEdit={setEditingGoal}
+          onCheer={cheerGoal}
         />
       )}
 
