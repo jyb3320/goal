@@ -162,6 +162,27 @@ textarea:focus-visible {
   }
 }
 
+/* 기간 목표 실패 사유 — 전역 focus의 흰 배경과 밝은 글자 충돌 방지 */
+.failure-form textarea,
+.failure-form textarea:focus {
+  border-color: rgba(232, 183, 92, 0.48) !important;
+  background: #171f3d !important;
+  color: #fff7e7 !important;
+  caret-color: #f6cd76;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 3px rgba(232, 183, 92, 0.08);
+}
+
+.failure-form textarea:focus {
+  border-color: rgba(246, 205, 118, 0.82) !important;
+  background: #20294d !important;
+  box-shadow: 0 0 0 4px rgba(232, 183, 92, 0.14);
+}
+
+.failure-form textarea::placeholder {
+  color: rgba(242, 234, 214, 0.62);
+  opacity: 1;
+}
+
 /* ---------- Shell ---------- */
 
 .shell {
