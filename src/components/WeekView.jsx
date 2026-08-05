@@ -67,12 +67,17 @@ function PersonTab({ name, index, selected, stats, onClick }) {
 
 function ReviewCard({ review, ownerName }) {
   const rows = [
-    ["실제로 한 일", review?.did || review?.facts],
-    ["잘된 조건", review?.goodConditions || review?.wins],
-    ["막힌 이유", review?.blockers || review?.avoidance],
-    ["다음 주 유지", review?.keep],
-    ["줄이거나 중단", review?.reduce],
-    ["다음 주 약속", review?.promises || review?.priority],
+    ["이번 주 요약", review?.summary || review?.did || review?.facts],
+    ["잘한 선택", review?.wins || review?.goodConditions],
+    ["선택을 이어갈 방법", review?.winsReasonPlan],
+    ["피하거나 미룬 일", review?.avoidance || review?.blockers],
+    ["회피한 이유", review?.avoidanceReason],
+    ["시간과 돈의 사용", review?.timeMoney],
+    ["가장 신경 쓰이는 일", review?.worry],
+    ["다음 주에도 유지할 것", review?.keep],
+    ["중단하거나 줄일 것", review?.reduce],
+    ["다음 주 약속 세 가지", review?.promises],
+    ["다음 주 우선순위", review?.priority],
   ].filter(([, value]) => value);
 
   return (

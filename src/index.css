@@ -4438,6 +4438,30 @@ button.hud-card {
   min-height: 76px;
 }
 
+.review-form .review-followup {
+  margin-left: 22px;
+  border-left: 2px solid color-mix(in srgb, var(--teal) 42%, transparent);
+  padding-left: 12px;
+}
+
+.review-followup > span,
+.review-read .review-followup > span {
+  color: var(--ink-soft);
+}
+
+.review-followup > span i,
+.review-read .review-followup > span i {
+  margin-right: 6px;
+  color: var(--teal);
+  font-style: normal;
+}
+
+.review-read .review-followup {
+  margin-left: 14px;
+  border-left-color: color-mix(in srgb, var(--teal) 48%, transparent);
+  background: color-mix(in srgb, var(--paper-deep) 78%, transparent);
+}
+
 .review-read {
   grid-template-columns: 1fr;
 }

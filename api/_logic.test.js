@@ -574,10 +574,21 @@ describe("인생 운영 시스템", () => {
     const weekly = b.post({
       action: "setWeeklyReview",
       name: "햄",
-      review: { weekStart, wins: "운동 3회", priority: "수면 회복" },
+      review: {
+        weekStart,
+        summary: "운동과 수면에 집중한 주",
+        wins: "운동 3회",
+        winsReasonPlan: "아침에 시간을 확보해서 다음 주에도 이어간다",
+        avoidance: "병원 예약",
+        avoidanceReason: "결과를 확인하기 두려웠다",
+        priority: "수면 회복",
+      },
     });
     expect(weekly.respond.weeklyReviews).toHaveLength(1);
     expect(weekly.respond.weeklyReviews[0].wins).toBe("운동 3회");
+    expect(weekly.respond.weeklyReviews[0].summary).toBe("운동과 수면에 집중한 주");
+    expect(weekly.respond.weeklyReviews[0].winsReasonPlan).toContain("다음 주에도");
+    expect(weekly.respond.weeklyReviews[0].avoidanceReason).toBe("결과를 확인하기 두려웠다");
 
     const month = seoulToday().slice(0, 7);
     b.post({ action: "setMonthlyReview", name: "햄", review: { month, improvement: "체력" } });

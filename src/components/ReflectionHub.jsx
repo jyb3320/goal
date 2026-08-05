@@ -4,22 +4,25 @@ import { weekDates, weekDatesOf } from "../lib/dates.js";
 import { pastWeeklyReviews } from "../lib/reviews.js";
 
 const WEEK_FIELDS = [
-  ["did", "1) 실제로 한 일은 무엇인가?", "완료한 행동과 진척을 사실대로 적기"],
-  ["goodConditions", "2) 잘된 조건은 무엇인가?", "시간·장소·도움·환경에서 찾기"],
-  ["blockers", "3) 막힌 이유는 무엇인가?", "의지보다 구조와 조건을 보기"],
-  ["keep", "4) 다음 주에도 유지할 것은?", "효과가 있었던 행동과 조건"],
-  ["reduce", "5) 중단하거나 줄일 것은?", "덜어내야 할 일과 기준"],
-  ["promises", "다음 주 약속 세 가지", "구체적이고 확인 가능한 약속"],
+  ["summary", "1. 이번 주 요약", "이번 주에 있었던 중요한 일과 흐름을 간단히 적기"],
+  ["wins", "2. 잘한 선택", "이번 주에 내린 선택 중 잘했다고 생각하는 것"],
+  ["winsReasonPlan", "그렇게 생각한 이유, 앞으로 어떻게 지속해 나갈 것인지", "그 선택이 좋았던 이유와 계속 이어갈 방법", "followup"],
+  ["avoidance", "3. 피하거나 미룬 일", "알면서도 피했거나 뒤로 미룬 일"],
+  ["avoidanceReason", "회피한 이유", "그 일을 피하게 된 상황이나 마음", "followup"],
+  ["timeMoney", "4. 시간과 돈의 사용", "이번 주 시간과 돈을 어디에 썼는지 돌아보기"],
+  ["worry", "5. 지금 가장 신경 쓰이는 일", "지금 머릿속을 가장 많이 차지하는 일"],
+  ["keep", "6. 다음 주에도 유지할 것은?", "효과가 있었고 계속 이어가고 싶은 것"],
+  ["reduce", "7. 중단하거나 줄일 것은?", "덜어내거나 멈추고 싶은 일"],
+  ["promises", "8. 다음 주 약속 세 가지", "한 줄에 하나씩, 구체적이고 확인 가능한 약속"],
+  ["priority", "다음 주 우선순위", "세 가지 약속 중 가장 먼저 지킬 것", "followup"],
 ];
 
 const LEGACY_WEEK_FIELDS = [
   ["facts", "실제로 있었던 일"],
-  ["wins", "잘한 선택"],
-  ["avoidance", "피하거나 미룬 일"],
-  ["timeMoney", "시간과 돈의 사용"],
-  ["worry", "지금 가장 신경 쓰이는 일"],
   ["honestTalk", "솔직하게 나눌 이야기"],
-  ["priority", "다음 주 우선순위"],
+  ["did", "실제로 한 일"],
+  ["goodConditions", "잘된 조건"],
+  ["blockers", "막힌 이유"],
 ];
 
 const WEEK_HISTORY_FIELDS = [...WEEK_FIELDS, ...LEGACY_WEEK_FIELDS];
@@ -46,7 +49,7 @@ function ReviewForm({ fields, initial, periodKey, onSave, submitLabel }) {
   };
   return (
     <form className="review-form" onSubmit={submit}>
-      {fields.map(([key, label, placeholder]) => <label key={key}><span>{label}</span><textarea value={draft[key] || ""} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} placeholder={placeholder} rows={3} /></label>)}
+      {fields.map(([key, label, placeholder, kind]) => <label key={key} className={kind === "followup" ? "review-followup" : ""}><span>{kind === "followup" && <i aria-hidden="true">↳</i>}{label}</span><textarea value={draft[key] || ""} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} placeholder={placeholder} rows={3} /></label>)}
       {"weekStart" in periodKey && <label className="sheet-check"><input type="checkbox" checked={createPromises} onChange={(e) => setCreatePromises(e.target.checked)} /><span>다음 주 약속 세 가지를 다음 주 목표로 자동 생성</span></label>}
       <button className="btn-primary life-save" type="submit" disabled={saving}>{saving ? "기록 중…" : submitLabel}</button>
     </form>
@@ -55,7 +58,7 @@ function ReviewForm({ fields, initial, periodKey, onSave, submitLabel }) {
 
 function ReviewRead({ review, fields, empty }) {
   if (!review) return <div className="life-empty">{empty}</div>;
-  return <div className="review-read">{fields.filter(([key]) => review[key]).map(([key, label]) => <article key={key}><span>{label}</span><p>{review[key]}</p></article>)}</div>;
+  return <div className="review-read">{fields.filter(([key]) => review[key]).map(([key, label, , kind]) => <article key={key} className={kind === "followup" ? "review-followup" : ""}><span>{kind === "followup" && <i aria-hidden="true">↳</i>}{label}</span><p>{review[key]}</p></article>)}</div>;
 }
 
 function WeeklyReviewArchive({ reviews, me, otherName, currentWeekStart }) {
@@ -86,7 +89,7 @@ function WeeklyReviewArchive({ reviews, me, otherName, currentWeekStart }) {
               <details key={review.id || `${review.owner}-${review.weekStart}`} open={index === 0}>
                 <summary>
                   <span>{review.weekStart.slice(5).replace("-", ".")} — {weekEnd.slice(5).replace("-", ".")}</span>
-                  <strong>{review.did || review.wins || review.facts || "기록한 복기 열기"}</strong>
+                  <strong>{review.summary || review.did || review.wins || review.facts || "기록한 복기 열기"}</strong>
                   <i aria-hidden="true">⌄</i>
                 </summary>
                 <ReviewRead review={review} fields={WEEK_HISTORY_FIELDS} empty="기록 내용이 없어요." />
