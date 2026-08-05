@@ -63,6 +63,19 @@ async function sendMessagePush(state, fromName, text) {
   });
 }
 
+// 도장 찍기: 새로 도장을 찍었을 때(취소가 아니라)만 상대에게 즉시 푸시.
+// 찍는 목표마다 알림이 가므로 태그를 매번 새로 만든다 — 하나로 뭉쳐 사라지지 않게.
+async function sendStampPush(state, fromName, goalTitle) {
+  const target = state.users.find((u) => u !== fromName);
+  const sub = target && state.push[target];
+  if (!sub) return;
+  await sendPush(sub, {
+    title: "도장판 印",
+    body: `${fromName}이(가) "${pushBody(goalTitle, 40)}" 도장을 찍었어요`,
+    tag: `stamp-${Date.now()}`,
+  });
+}
+
 function parseBody(req) {
   if (req.body && typeof req.body === "object") return req.body;
   if (typeof req.body === "string") {
@@ -124,6 +137,26 @@ export default async function handler(req, res) {
               console.error("message push failed", e.statusCode || e.message);
             }
           });
+        }
+        // toggleCheckin은 취소할 때도 호출되므로, 이번 요청이 실제로 새 도장을
+        // "찍은" 경우에만 보낸다 — xpAwards에 DAILY_GOAL_COMPLETE가 찍혀 있으면 그 경우다.
+        if (str(body.action, 30) === "toggleCheckin") {
+          const stamped = (out.respond.xpAwards || []).some(
+            (a) => a.awarded && a.event?.eventType === "DAILY_GOAL_COMPLETE"
+          );
+          if (stamped) {
+            const goal = out.state.goals.find((g) => g.id === str(body.goalId, 40));
+            await sendStampPush(out.state, str(body.name, 20), goal?.title || "오늘의 목표").catch(
+              async (e) => {
+                const target = out.state.users.find((u) => u !== str(body.name, 20));
+                if (target && (e.statusCode === 404 || e.statusCode === 410)) {
+                  await removeDeadPush(target);
+                } else {
+                  console.error("stamp push failed", e.statusCode || e.message);
+                }
+              }
+            );
+          }
         }
         return res.status(out.status).json(out.respond);
       }
