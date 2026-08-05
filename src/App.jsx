@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import Village from "./Village.jsx";
 import { computeXP, levelOf, xpForLevel } from "./lib/xp.js";
 import { todayStr, weekDates } from "./lib/dates.js";
@@ -13,6 +14,7 @@ import HistoryView from "./components/HistoryView.jsx";
 import GoalMemoPanel from "./components/GoalMemoPanel.jsx";
 import MissedPanel from "./components/MissedPanel.jsx";
 import VillageHero from "./components/VillageHero.jsx";
+import VillageBackdrop from "./components/VillageBackdrop.jsx";
 import Toast from "./components/Toast.jsx";
 import BigGoalPanel from "./components/BigGoalPanel.jsx";
 import SeasonBoard from "./components/SeasonBoard.jsx";
@@ -23,7 +25,11 @@ import CalendarView from "./components/CalendarView.jsx";
 import ProjectGoalCard from "./components/ProjectGoalCard.jsx";
 import PhotoDuo from "./components/PhotoDuo.jsx";
 import { goalKind, isGoalDueOn } from "./lib/goals.js";
+import { reducedMotion } from "./lib/fx.js";
 import { XP_EVENT_LABELS } from "../shared/xp-config.js";
+
+// 서버(api/_logic.js)의 EXCUSE_BACKFILL_DAYS와 같은 값이어야 한다.
+const EXCUSE_BACKFILL_DAYS = 7;
 
 const API = "/api/state";
 const EMPTY_STATE = {
@@ -102,6 +108,17 @@ export default function App() {
     } else if (capped) {
       showToast("마음은 잘 전달했어요.\n오늘 받을 수 있는 응원 XP는 모두 모았어요.");
     }
+  };
+
+  // 탭 전환을 브라우저의 View Transition으로 감싼다.
+  // 화면이 툭 바뀌는 대신 한 장면에서 다음 장면으로 넘어가는 느낌이 된다.
+  // 미지원 브라우저·움직임 최소화 설정에서는 그냥 즉시 전환된다.
+  const switchView = (next) => {
+    if (typeof document === "undefined" || !document.startViewTransition || reducedMotion()) {
+      setView(next);
+      return;
+    }
+    document.startViewTransition(() => flushSync(() => setView(next)));
   };
 
   const logout = () => {
@@ -370,7 +387,7 @@ export default function App() {
   const goToDesign = (tab, aiMode) => {
     if (aiMode) setAdvisorMode(aiMode);
     setDesignTab(tab);
-    setView("design");
+    switchView("design");
   };
 
   const friendActiveSeason = useMemo(
@@ -629,10 +646,10 @@ export default function App() {
   const villageNavigate = (destination, target = "") => {
     if (destination === "reflection") {
       setDesignTab("reflection");
-      setView("design");
+      switchView("design");
       return;
     }
-    setView(destination);
+    switchView(destination);
     if (destination !== "board" || !target) return;
     const ids = {
       top: "board-top",
@@ -650,8 +667,8 @@ export default function App() {
     villageNavigate("board", "mine");
   };
 
-  const saveExcuse = (goalId, text) => {
-    mutate({ action: "addExcuse", goalId, text });
+  const saveExcuse = (goalId, date, text) => {
+    mutate({ action: "addExcuse", goalId, date, text });
   };
 
   // ✕ 칸을 누르면 그날 못 찍은 이유를 토스트로
@@ -668,17 +685,23 @@ export default function App() {
     return fromFriend.length > 0 ? fromFriend[fromFriend.length - 1] : null;
   }, [state.pokes, otherName]);
 
-  // 어제 못 찍은 매일 목표 — 이유를 남기거나 소급 도장을 찍어야 사라짐
-  const missedYesterday = useMemo(() => {
-    const yesterday = todayStr(-1);
-    return myGoals.filter(
-      (g) =>
-        g.type === "daily" &&
-        isGoalDueOn(g, yesterday) &&
-        (!g.createdAt || g.createdAt <= yesterday) &&
-        !checkinSet.has(`${g.id}_${yesterday}`) &&
-        !state.excuses.some((x) => x.goalId === g.id && x.date === yesterday)
-    );
+  // 최근 며칠 못 찍은 매일 목표 — 이유를 남기거나(7일 전까지) 소급 도장(어제만)을 찍어야 사라짐.
+  // 여행·출장으로 이틀 이상 비어도 돌아와서 기록을 채울 수 있게 어제 하루만 보지 않는다.
+  const missedRecent = useMemo(() => {
+    const days = [];
+    for (let back = 1; back <= EXCUSE_BACKFILL_DAYS; back++) {
+      const date = todayStr(-back);
+      const goals = myGoals.filter(
+        (g) =>
+          g.type === "daily" &&
+          isGoalDueOn(g, date) &&
+          (!g.createdAt || g.createdAt <= date) &&
+          !checkinSet.has(`${g.id}_${date}`) &&
+          !state.excuses.some((x) => x.goalId === g.id && x.date === date)
+      );
+      if (goals.length > 0) days.push({ date, goals });
+    }
+    return days;
   }, [myGoals, checkinSet, state.excuses]);
 
   const deleteMessage = (id) => {
@@ -806,7 +829,16 @@ export default function App() {
     );
 
   return (
-    <div className="shell">
+    <>
+      {/* 모든 탭이 같은 세계 위에 뜬다 — 탭을 바꿔도 마을은 이어진다 */}
+      <VillageBackdrop
+        done={todayDone}
+        total={todayStampGoals.length}
+        treeCount={state.checkins.filter((c) => myGoalIdSet.has(c.goalId)).length}
+        friendActiveToday={friendActiveToday}
+        otherName={otherName}
+      />
+      <div className="shell">
       <div className="masthead">
         <h1>
           <span className="stamp-dot" />
@@ -834,22 +866,22 @@ export default function App() {
       <PhotoDuo users={state.users} />
 
       <nav className="view-tabs" aria-label="주요 화면">
-        <button type="button" className={view === "board" ? "active" : ""} onClick={() => setView("board")}>
+        <button type="button" className={view === "board" ? "active" : ""} onClick={() => switchView("board")}>
           <span>今日</span> 오늘
         </button>
-        <button type="button" className={view === "week" ? "active" : ""} onClick={() => setView("week")}>
+        <button type="button" className={view === "week" ? "active" : ""} onClick={() => switchView("week")}>
           <span>週</span> 이번 주
         </button>
-        <button type="button" className={view === "calendar" ? "active" : ""} onClick={() => setView("calendar")}>
+        <button type="button" className={view === "calendar" ? "active" : ""} onClick={() => switchView("calendar")}>
           <span>曆</span> 캘린더
         </button>
-        <button type="button" className={view === "design" ? "active" : ""} onClick={() => setView("design")}>
+        <button type="button" className={view === "design" ? "active" : ""} onClick={() => switchView("design")}>
           <span>設</span> 설계실
         </button>
-        <button type="button" className={view === "history" ? "active" : ""} onClick={() => setView("history")}>
+        <button type="button" className={view === "history" ? "active" : ""} onClick={() => switchView("history")}>
           <span>記</span> 기록
         </button>
-        <button type="button" className={view === "village" ? "active" : ""} onClick={() => setView("village")}>
+        <button type="button" className={view === "village" ? "active" : ""} onClick={() => switchView("village")}>
           <span>村</span> 마을 <span className="tab-level">Lv.{myLevel}</span>
         </button>
       </nav>
@@ -981,7 +1013,7 @@ export default function App() {
             xpLeft={xpNeed - (myXP - xpBase)}
             treeCount={state.checkins.filter((c) => myGoalIdSet.has(c.goalId)).length}
             friendActiveToday={friendActiveToday}
-            onEnterVillage={() => setView("village")}
+            onEnterVillage={() => switchView("village")}
           />
 
           {cadencePrompt && cadencePrompt.key !== dismissedCadence && (
@@ -1022,9 +1054,10 @@ export default function App() {
             </div>
           )}
 
-          {missedYesterday.length > 0 && (
+          {missedRecent.length > 0 && (
             <MissedPanel
-              goals={missedYesterday}
+              days={missedRecent}
+              yesterday={todayStr(-1)}
               onStamp={(goalId, min) => toggleCheckin(goalId, todayStr(-1), min)}
               onSaveReason={saveExcuse}
             />
@@ -1136,6 +1169,7 @@ export default function App() {
       )}
 
       <Toast toast={toast} />
-    </div>
+      </div>
+    </>
   );
 }

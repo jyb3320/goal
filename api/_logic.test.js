@@ -8,6 +8,7 @@ import {
   countMissedToday,
   countTodayGoals,
   seoulWeekDates,
+  EXCUSE_BACKFILL_DAYS,
 } from "./_logic.js";
 
 // Redis 대신 인메모리로 handlePost를 돌리는 테스트용 보드
@@ -362,6 +363,45 @@ describe("반성 노트 (못 찍은 이유)", () => {
     b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "야근" });
     const r = b.post({ action: "deleteGoal", name: "햄", goalId: "g1" });
     expect(r.respond.excuses).toHaveLength(0);
+  });
+
+  // 여행·출장으로 이틀 이상 비어도 돌아와서 기록을 채울 수 있어야 한다.
+  it("며칠 전 날짜에도 이유를 남길 수 있음", () => {
+    const b = boardWithOldGoal();
+    const threeDaysAgo = shiftDate(seoulToday(), -3);
+    const r = b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: threeDaysAgo, text: "여행" });
+    expect(r.status).toBe(200);
+    expect(r.respond.excuses[0].date).toBe(threeDaysAgo);
+  });
+
+  it("여러 날에 각각 이유를 남기면 따로 쌓임", () => {
+    const b = boardWithOldGoal();
+    b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: shiftDate(seoulToday(), -2), text: "여행 1일차" });
+    const r = b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: shiftDate(seoulToday(), -3), text: "여행 2일차" });
+    expect(r.respond.excuses).toHaveLength(2);
+  });
+
+  it("date를 안 주면 어제로 처리 (기존 호출 호환)", () => {
+    const b = boardWithOldGoal();
+    const r = b.post({ action: "addExcuse", name: "햄", goalId: "g1", text: "야근" });
+    expect(r.respond.excuses[0].date).toBe(yesterday());
+  });
+
+  it("보관 기간을 넘긴 과거와 오늘·미래에는 남길 수 없음", () => {
+    const b = boardWithOldGoal();
+    const tooOld = shiftDate(seoulToday(), -(EXCUSE_BACKFILL_DAYS + 1));
+    expect(b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: tooOld, text: "x" }).status).toBe(400);
+    expect(b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: seoulToday(), text: "x" }).status).toBe(400);
+    const tomorrow = shiftDate(seoulToday(), 1);
+    expect(b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: tomorrow, text: "x" }).status).toBe(400);
+  });
+
+  it("그날 도장을 찍었으면 그날 이유는 못 남김", () => {
+    const b = boardWithOldGoal();
+    b.post({ action: "toggleCheckin", name: "햄", goalId: "g1", date: yesterday() });
+    const twoDaysAgo = shiftDate(seoulToday(), -2);
+    expect(b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: yesterday(), text: "x" }).status).toBe(400);
+    expect(b.post({ action: "addExcuse", name: "햄", goalId: "g1", date: twoDaysAgo, text: "o" }).status).toBe(200);
   });
 });
 

@@ -15,6 +15,11 @@
   --shadow: 0 18px 50px rgba(36, 31, 24, 0.13);
   --shadow-soft: 0 8px 24px rgba(36, 31, 24, 0.09);
   --radius: 6px;
+  /* 형태는 세 가지만 — 눌린 면 / 면 / 알약.
+     값이 12종류로 흩어져 있으면 눈은 그걸 "정리 안 됨"으로 읽는다. */
+  --r-sm: 4px;
+  --r-md: 16px;
+  --r-pill: 999px;
   --font-display: "Gowun Batang", serif;
   --font-body: "Noto Sans KR", sans-serif;
   /* 예전엔 JetBrains Mono — 코딩 폰트가 한지 톤을 깨서 본문 폰트로 통일 */
@@ -76,7 +81,7 @@ textarea:focus-visible {
 .weekly-review-owner button {
   padding: 7px 13px;
   border: 1px solid rgba(201, 181, 127, 0.58);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(22, 29, 57, 0.66);
   color: var(--ink-soft);
   cursor: pointer;
@@ -418,7 +423,7 @@ textarea:focus-visible {
   position: absolute;
   inset: 8px;
   border: 1px solid rgba(36, 31, 24, 0.12);
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   pointer-events: none;
 }
 
@@ -584,7 +589,7 @@ textarea:focus-visible {
   background: rgba(29, 36, 71, 0.84);
   border: 1px solid rgba(214, 199, 155, 0.8);
   padding: 4px 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 
 .goal-column {
@@ -872,7 +877,7 @@ textarea:focus-visible {
 .reaction-chip {
   border: 1px solid rgba(214, 199, 155, 0.9);
   background: rgba(29, 36, 71, 0.88);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   padding: 4px 9px;
   font-size: 12px;
   display: flex;
@@ -1522,7 +1527,7 @@ textarea:focus-visible {
   border: 1px solid var(--line-strong);
   background: rgba(29, 36, 71, 0.7);
   color: var(--stamp-red-deep);
-  border-radius: 14px;
+  border-radius: var(--r-md);
   padding: 6px 13px;
   font-size: 12.5px;
   font-weight: 600;
@@ -1677,7 +1682,7 @@ textarea:focus-visible {
 .hud-xpbar {
   height: 8px;
   background: var(--paper-deep);
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   margin-bottom: 4px;
 }
@@ -1685,7 +1690,7 @@ textarea:focus-visible {
 .hud-xpfill {
   height: 100%;
   background: linear-gradient(90deg, var(--gold), var(--stamp-red));
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   transition: width 0.5s ease;
 }
 
@@ -1731,7 +1736,7 @@ textarea:focus-visible {
   flex-direction: column;
   gap: 1px;
   border: 1px solid rgba(112, 87, 50, 0.42);
-  border-radius: 4px 4px 8px 8px;
+  border-radius: var(--r-sm) var(--r-md) var(--r-md) var(--r-sm);
   padding: 5px 8px;
   background:
     linear-gradient(rgba(29, 36, 71, 0.94), rgba(29, 36, 71, 0.94));
@@ -1798,7 +1803,7 @@ textarea:focus-visible {
   max-height: calc(100% - 155px);
   overflow-y: auto;
   border: 1px solid rgba(113, 84, 47, 0.5);
-  border-radius: 5px 13px 13px 5px;
+  border-radius: var(--r-sm) var(--r-md) var(--r-md) var(--r-sm);
   padding: 20px;
   background:
     linear-gradient(90deg, transparent 25px, rgba(181, 50, 40, 0.13) 26px, transparent 27px),
@@ -1923,7 +1928,7 @@ textarea:focus-visible {
 
 .village-cta {
   border: 1px solid rgba(91, 72, 45, 0.32);
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   padding: 7px 10px;
   background: rgba(29, 36, 71, 0.82);
   color: var(--ink);
@@ -1958,7 +1963,7 @@ textarea:focus-visible {
 .village-notices article {
   padding: 11px;
   border: 1px solid rgba(126, 91, 49, 0.27);
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: rgba(29, 36, 71, 0.74);
   box-shadow: 2px 2px 0 rgba(122, 91, 48, 0.1);
   transform: rotate(-0.2deg);
@@ -1993,7 +1998,7 @@ textarea:focus-visible {
   height: 5px;
   margin-top: 7px;
   overflow: hidden;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: rgba(95, 78, 52, 0.12);
 }
 
@@ -2016,7 +2021,7 @@ textarea:focus-visible {
 .village-seeds li {
   padding: 9px 10px;
   border: 1px solid rgba(112, 86, 50, 0.2);
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   background: rgba(29, 36, 71, 0.68);
 }
 
@@ -2052,7 +2057,7 @@ textarea:focus-visible {
   min-width: 0;
   flex: 1;
   border: 1px solid rgba(99, 78, 48, 0.28);
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   padding: 8px 9px;
   background: rgba(29, 36, 71, 0.78);
   font-size: 11px;
@@ -2060,7 +2065,7 @@ textarea:focus-visible {
 
 .village-note-input button {
   border: 0;
-  border-radius: 5px;
+  border-radius: var(--r-sm);
   padding: 7px 10px;
   background: var(--teal);
   color: #fff8e7;
@@ -2118,7 +2123,7 @@ textarea:focus-visible {
     width: 100%;
     max-height: 72%;
     border-width: 1px 0 0;
-    border-radius: 18px 18px 0 0;
+    border-radius: var(--r-md) var(--r-md) 0 0;
     padding: 18px 16px 22px 28px;
     animation-name: village-sheet-open;
   }
@@ -2232,14 +2237,14 @@ textarea:focus-visible {
   height: 12px;
   background: var(--paper-deep);
   border: 1px solid rgba(185, 163, 110, 0.35);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   overflow: hidden;
 }
 
 .ws-bar-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--teal), #4f9a72);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   transition: width 0.4s ease;
 }
 
@@ -2259,7 +2264,7 @@ textarea:focus-visible {
   background: rgba(46, 107, 94, 0.09);
   border: 1px solid rgba(46, 107, 94, 0.25);
   padding: 1px 6px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   white-space: nowrap;
 }
 
@@ -2331,7 +2336,7 @@ textarea:focus-visible {
   height: 14px;
   background: var(--paper-deep);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   margin-bottom: 6px;
 }
@@ -2339,7 +2344,7 @@ textarea:focus-visible {
 .milestone-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--stamp-red), var(--stamp-red-deep));
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   transition: width 0.4s ease;
 }
 
@@ -2729,7 +2734,7 @@ textarea:focus-visible {
   color: var(--ink);
   font-size: 13px;
   padding: 10px 18px;
-  border-radius: 20px;
+  border-radius: var(--r-md);
   box-shadow: 0 4px 16px rgba(36, 31, 24, 0.25);
   z-index: 100;
   max-width: calc(100vw - 40px);
@@ -2756,7 +2761,7 @@ textarea:focus-visible {
   font-weight: 600;
   font-size: 12.5px;
   padding: 5px 11px;
-  border-radius: 13px;
+  border-radius: var(--r-md);
   box-shadow: 0 2px 5px rgba(138, 36, 29, 0.35);
   white-space: nowrap;
   flex-shrink: 0;
@@ -2766,7 +2771,7 @@ textarea:focus-visible {
   flex: 1;
   height: 12px;
   background: var(--paper-deep);
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   overflow: hidden;
 }
 
@@ -2774,7 +2779,7 @@ textarea:focus-visible {
   height: 100%;
   min-width: 6px;
   background: linear-gradient(90deg, var(--gold), var(--stamp-red));
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   position: relative;
   overflow: hidden;
   transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -2836,7 +2841,7 @@ textarea:focus-visible {
   margin-left: 10px;
   background: transparent;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   color: var(--gold);
   font-family: var(--font-mono);
   font-size: 11px;
@@ -2858,7 +2863,7 @@ textarea:focus-visible {
 .poke-btn {
   background: rgba(46, 107, 94, 0.08);
   border: 1px solid rgba(46, 107, 94, 0.35);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--teal);
   font-size: 12px;
   font-weight: 700;
@@ -2912,6 +2917,29 @@ textarea:focus-visible {
 
 .missed-head span {
   font-size: 12px;
+  color: var(--ink-soft);
+}
+
+/* 날짜별 묶음 — 어제 것과 그 이전 날을 눈으로 구분한다 */
+.missed-day + .missed-day {
+  margin-top: 14px;
+}
+
+.missed-day-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.missed-day-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  color: var(--gold);
+}
+
+.missed-day-note {
+  font-size: 11px;
   color: var(--ink-soft);
 }
 
@@ -3212,7 +3240,7 @@ textarea:focus-visible {
   align-items: center;
   justify-content: center;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--ink-soft);
@@ -3444,7 +3472,7 @@ button.hud-card {
   gap: 11px;
   padding: 11px 12px;
   border: 1px solid rgba(184, 139, 47, 0.22);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.82);
 }
 
@@ -3510,7 +3538,7 @@ button.hud-card {
   overflow-y: auto;
   padding: 30px 26px 22px 48px;
   border: 1px solid rgba(80, 65, 45, 0.22);
-  border-radius: 4px 12px 12px 4px;
+  border-radius: var(--r-sm) var(--r-md) var(--r-md) var(--r-sm);
   background:
     linear-gradient(90deg, transparent 30px, rgba(181, 50, 40, 0.2) 31px, transparent 32px),
     repeating-linear-gradient(0deg, var(--paper-soft) 0, var(--paper-soft) 27px, rgba(74, 116, 132, 0.14) 28px);
@@ -3673,12 +3701,6 @@ button.hud-card {
   z-index: 1;
 }
 
-.compass-hero {
-  background:
-    radial-gradient(circle at 82% 25%, rgba(29, 36, 71, 0.28), transparent 25%),
-    linear-gradient(135deg, #203d37, #2e6b5e 62%, #264c44);
-}
-
 .season-hero {
   background:
     radial-gradient(circle at 82% 24%, rgba(29, 36, 71, 0.16), transparent 28%),
@@ -3746,7 +3768,6 @@ button.hud-card {
 }
 
 .person-switch,
-.section-switch,
 .reflection-tabs {
   display: flex;
   overflow: hidden;
@@ -3756,7 +3777,6 @@ button.hud-card {
 }
 
 .person-switch button,
-.section-switch button,
 .reflection-tabs button {
   border: 0;
   border-right: 1px solid var(--line);
@@ -3767,13 +3787,11 @@ button.hud-card {
 }
 
 .person-switch button:last-child,
-.section-switch button:last-child,
 .reflection-tabs button:last-child {
   border-right: 0;
 }
 
 .person-switch button.selected,
-.section-switch button.selected,
 .reflection-tabs button.selected {
   background: var(--sel);
   color: var(--on-sel);
@@ -3854,8 +3872,6 @@ button.hud-card {
   color: var(--stamp-red);
 }
 
-.constitution-form,
-.domain-form,
 .season-form,
 .review-form,
 .decision-form,
@@ -3864,12 +3880,6 @@ button.hud-card {
   gap: 14px;
 }
 
-.constitution-form {
-  grid-template-columns: 1fr 1fr;
-}
-
-.constitution-form label,
-.domain-form label,
 .season-form label,
 .review-form label,
 .decision-form label,
@@ -3880,8 +3890,6 @@ button.hud-card {
   gap: 6px;
 }
 
-.constitution-form label > span,
-.domain-form label > span,
 .season-form label > span,
 .review-form label > span,
 .decision-form label > span,
@@ -3892,10 +3900,6 @@ button.hud-card {
   font-weight: 700;
 }
 
-.constitution-form input,
-.constitution-form textarea,
-.domain-form input,
-.domain-form textarea,
 .season-form input,
 .season-form textarea,
 .season-form select,
@@ -3920,8 +3924,6 @@ button.hud-card {
   line-height: 1.55;
 }
 
-.constitution-form textarea,
-.domain-form textarea,
 .season-form textarea,
 .review-form textarea,
 .decision-form textarea,
@@ -3935,32 +3937,24 @@ button.hud-card {
   min-width: 170px;
 }
 
-.constitution-form .life-save {
-  grid-column: 1 / -1;
-}
-
-.constitution-read,
 .review-read {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
 
-.constitution-read article,
 .review-read article {
   background: rgba(29, 36, 71, 0.68);
   border-left: 3px solid var(--teal);
   padding: 11px 13px;
 }
 
-.constitution-read span,
 .review-read span {
   color: var(--teal);
   font-size: 10.5px;
   font-weight: 700;
 }
 
-.constitution-read p,
 .review-read p {
   margin: 5px 0 0;
   white-space: pre-wrap;
@@ -3976,134 +3970,12 @@ button.hud-card {
   padding: 26px 12px;
 }
 
-.domain-layout {
-  display: grid;
-  grid-template-columns: minmax(230px, 0.72fr) 1.6fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.domain-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: 6px;
-  border: 1px solid rgba(185, 163, 110, 0.7);
-  border-radius: var(--radius);
-  background: rgba(29, 36, 71, 0.76);
-}
-
-.domain-grid button {
-  display: grid;
-  grid-template-columns: 34px 1fr auto;
-  align-items: center;
-  gap: 9px;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--ink);
-  padding: 9px;
-  text-align: left;
-}
-
-.domain-grid button.selected {
-  border-color: rgba(46, 107, 94, 0.45);
-  background: rgba(46, 107, 94, 0.1);
-}
-
-.domain-glyph {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--stamp-red);
-  font-family: var(--font-display);
-}
-
-.domain-grid button > span:nth-child(2) {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-}
-
-.domain-grid strong {
-  font-size: 12.5px;
-}
-
-.domain-grid small {
-  overflow: hidden;
-  color: var(--ink-soft);
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.domain-grid b {
-  color: var(--teal);
-  font-size: 11px;
-}
-
-.domain-form {
-  grid-template-columns: 1fr 1fr;
-}
-
-.domain-form .score-field,
-.domain-form .life-save {
-  grid-column: 1 / -1;
-}
-
-.score-field > div {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.score-field input {
-  padding: 0;
-}
-
-.score-field strong {
-  color: var(--stamp-red);
-  font-family: var(--font-display);
-  font-size: 18px;
-  white-space: nowrap;
-}
-
-.domain-read {
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 20px;
-  align-items: start;
-}
-
-.domain-score-large {
-  display: grid;
-  width: 100px;
-  height: 100px;
-  place-items: center;
-  border: 3px solid var(--teal);
-  border-radius: 50%;
-  color: var(--teal);
-  font-family: var(--font-display);
-  font-size: 36px;
-}
-
-.domain-score-large span {
-  margin-left: -25px;
-  font-size: 13px;
-  transform: translate(28px, 22px);
-}
-
-.domain-read dl,
 .season-read dl {
   display: grid;
   gap: 10px;
   margin: 0;
 }
 
-.domain-read dl > div,
 .season-read dl > div {
   display: grid;
   grid-template-columns: 90px 1fr;
@@ -4112,13 +3984,11 @@ button.hud-card {
   padding-bottom: 8px;
 }
 
-.domain-read dt,
 .season-read dt {
   color: var(--ink-soft);
   font-size: 11px;
 }
 
-.domain-read dd,
 .season-read dd {
   margin: 0;
   white-space: pre-wrap;
@@ -4157,7 +4027,7 @@ button.hud-card {
   display: inline-block;
   margin-bottom: 18px;
   border: 1px solid rgba(46, 107, 94, 0.35);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(46, 107, 94, 0.08);
   color: var(--teal);
   padding: 4px 11px;
@@ -4342,7 +4212,7 @@ button.hud-card {
 
 .life-domain-tag {
   border: 1px solid rgba(46, 107, 94, 0.25);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(46, 107, 94, 0.07);
   color: var(--teal);
   padding: 1px 6px;
@@ -4452,7 +4322,7 @@ button.hud-card {
   gap: 20px;
   overflow: hidden;
   padding: 25px 27px 22px;
-  border-radius: 28px;
+  border-radius: var(--r-md);
   background:
     radial-gradient(circle at 87% 18%, rgba(200, 168, 108, 0.19), transparent 28%),
     linear-gradient(135deg, #20211e, #30312c);
@@ -4488,7 +4358,7 @@ button.hud-card {
 .calendar-add {
   flex: 0 0 auto;
   border: 1px solid rgba(246, 205, 118, 0.35);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: rgba(246, 205, 118, 0.12);
   color: #f6cd76;
   padding: 10px 14px;
@@ -4499,7 +4369,7 @@ button.hud-card {
 .calendar-paper {
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 23px;
+  border-radius: var(--r-md);
   background: rgba(25, 31, 60, 0.72);
   box-shadow: var(--shadow-soft);
 }
@@ -4526,7 +4396,7 @@ button.hud-card {
   width: 34px;
   height: 34px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: rgba(242, 234, 214, 0.04);
   color: var(--ink);
   font-size: 20px;
@@ -4551,7 +4421,7 @@ button.hud-card {
   gap: 6px;
   padding: 7px 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--ink-soft);
   font-size: 11px;
   font-weight: 700;
@@ -4679,7 +4549,7 @@ button.hud-card {
   height: 20px;
   border: 0;
   border-left: 3px solid #ce7a61;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   background: rgba(181, 93, 69, 0.2);
   color: #f1d9d0;
   padding: 2px 5px;
@@ -4762,7 +4632,7 @@ button.hud-card {
   width: 100%;
   margin-top: 12px;
   border: 1px dashed var(--line-strong);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: rgba(200, 173, 127, 0.05);
   color: #c9ad7f;
   padding: 8px;
@@ -4777,7 +4647,7 @@ button.hud-card {
   gap: 10px;
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: rgba(242, 234, 214, 0.035);
   color: var(--ink);
   padding: 10px;
@@ -4813,7 +4683,7 @@ button.hud-card {
   position: relative;
   width: min(390px, 100%);
   border: 1px solid var(--line-strong);
-  border-radius: 18px;
+  border-radius: var(--r-md);
   background:
     linear-gradient(rgba(29, 36, 71, 0.94), rgba(21, 27, 55, 0.96)),
     var(--paper-card);
@@ -4837,7 +4707,7 @@ button.hud-card {
 .calendar-owner-mark {
   display: inline-block;
   margin-bottom: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(181, 93, 69, 0.2);
   color: #edb7a7;
   padding: 4px 9px;
@@ -4853,14 +4723,14 @@ button.hud-card {
 .calendar-detail dt { color: var(--ink-soft); }
 .calendar-detail dd { margin: 0; }
 .calendar-detail-actions { display: flex; justify-content: flex-end; gap: 7px; }
-.calendar-detail-actions button { border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); padding: 8px 11px; font-size: 11px; }
+.calendar-detail-actions button { border: 1px solid var(--line); border-radius: var(--r-md); background: transparent; color: var(--ink); padding: 8px 11px; font-size: 11px; }
 .calendar-detail-actions button.primary { border-color: transparent; background: var(--stamp-red); color: white; }
 .calendar-detail-actions button.danger { color: #e19a88; }
 
 .calendar-event-form {
   width: min(430px, 100%);
   border: 1px solid var(--line-strong);
-  border-radius: 18px;
+  border-radius: var(--r-md);
   background: linear-gradient(rgba(29, 36, 71, 0.97), rgba(21, 27, 55, 0.98));
   box-shadow: var(--shadow);
   padding: 21px;
@@ -4886,7 +4756,7 @@ button.hud-card {
 .calendar-event-form .calendar-all-day input { width: auto; }
 .calendar-time-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .calendar-event-form footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
-.calendar-event-form footer button { border: 1px solid var(--line); border-radius: 10px; background: transparent; color: var(--ink); padding: 9px 13px; font-size: 11px; }
+.calendar-event-form footer button { border: 1px solid var(--line); border-radius: var(--r-md); background: transparent; color: var(--ink); padding: 9px 13px; font-size: 11px; }
 .calendar-event-form footer button.primary { border-color: transparent; background: var(--stamp-red); color: white; }
 .calendar-event-form footer button:disabled { cursor: default; opacity: 0.5; }
 
@@ -4898,7 +4768,7 @@ button.hud-card {
 }
 
 @media (max-width: 640px) {
-  .calendar-hero { align-items: flex-start; padding: 21px 19px 18px; border-radius: 22px; }
+  .calendar-hero { align-items: flex-start; padding: 21px 19px 18px; border-radius: var(--r-md); }
   .calendar-hero span { max-width: 250px; }
   .calendar-add { padding: 8px 10px; font-size: 10px; }
   .calendar-toolbar { align-items: flex-start; flex-direction: column; padding: 12px; }
@@ -4916,8 +4786,8 @@ button.hud-card {
   .calendar-agenda { padding: 15px 12px; }
   .calendar-agenda-list { grid-template-columns: 1fr; }
   .calendar-detail-layer { align-items: end; padding: 0; }
-  .calendar-detail { width: 100%; border-radius: 22px 22px 0 0; padding: 23px 20px max(24px, env(safe-area-inset-bottom)); }
-  .calendar-event-form { width: 100%; border-radius: 22px 22px 0 0; padding: 22px 18px max(24px, env(safe-area-inset-bottom)); }
+  .calendar-detail { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; padding: 23px 20px max(24px, env(safe-area-inset-bottom)); }
+  .calendar-event-form { width: 100%; border-radius: var(--r-md) var(--r-md) 0 0; padding: 22px 18px max(24px, env(safe-area-inset-bottom)); }
 }
 
 .review-form .review-followup {
@@ -5032,22 +4902,8 @@ button.hud-card {
 }
 
 @media (max-width: 820px) {
-  .domain-layout,
   .review-columns {
     grid-template-columns: 1fr;
-  }
-
-  .domain-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-  }
-
-  .domain-grid button {
-    grid-template-columns: 30px 1fr;
-  }
-
-  .domain-grid b {
-    grid-column: 2;
   }
 
   .life-item-columns {
@@ -5085,25 +4941,10 @@ button.hud-card {
     padding: 15px;
   }
 
-  .constitution-form,
-  .constitution-read,
-  .domain-form,
   .decision-list,
   .partner-charter,
   .support-notes {
     grid-template-columns: 1fr;
-  }
-
-  .domain-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .domain-grid button {
-    padding: 7px;
-  }
-
-  .domain-grid small {
-    display: none;
   }
 
   .field-pair {
@@ -5176,7 +5017,7 @@ button.hud-card {
   margin: 0;
   padding: 5px 8px;
   border: 1px solid rgba(46, 107, 94, 0.22);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(29, 36, 71, 0.72);
   color: #315b51;
   font-size: 11px;
@@ -5338,7 +5179,7 @@ button.hud-card {
   gap: 5px;
   padding: 7px 9px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(29, 36, 71, 0.64);
   color: var(--ink-soft);
   cursor: pointer;
@@ -5538,7 +5379,7 @@ button.hud-card {
 .ai-evidence details {
   max-width: 100%;
   border: 1px solid rgba(46, 107, 94, 0.3);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(29, 36, 71, 0.46);
 }
 
@@ -5905,7 +5746,7 @@ button.hud-card {
   max-height: 94dvh;
   overflow: auto;
   background: var(--paper-deep);
-  border-radius: 24px 24px 0 0;
+  border-radius: var(--r-md) var(--r-md) 0 0;
   box-shadow: 0 -18px 60px rgba(30, 22, 12, .25);
   animation: sheet-up .24s ease-out;
 }
@@ -5925,17 +5766,17 @@ button.hud-card {
 .goal-sheet-head h2 { margin: 2px 0 0; font-size: 22px; }
 .goal-sheet-head > button { width: 38px; height: 38px; border: 0; border-radius: 50%; background: var(--paper-soft); }
 .goal-stepper { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; padding: 14px 20px 0; }
-.goal-stepper span { display: grid; place-items: center; height: 5px; overflow: hidden; border-radius: 99px; background: var(--paper-deep); color: transparent; }
+.goal-stepper span { display: grid; place-items: center; height: 5px; overflow: hidden; border-radius: var(--r-md); background: var(--paper-deep); color: transparent; }
 .goal-stepper span.active { background: #aa2f2f; }
 .goal-sheet-body { min-height: 330px; padding: 22px 20px 12px; }
 .sheet-question { margin: 0 0 16px; color: #5d4a31; font-size: 17px; font-weight: 750; }
 .kind-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-.kind-grid button { display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper-soft); color: var(--ink); text-align: left; }
-.kind-grid button b { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--paper-soft); color: #985128; font-family: serif; font-size: 21px; }
+.kind-grid button { display: flex; align-items: center; gap: 12px; min-height: 76px; padding: 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper-soft); color: var(--ink); text-align: left; }
+.kind-grid button b { display: grid; place-items: center; width: 38px; height: 38px; border-radius: var(--r-md); background: var(--paper-soft); color: #985128; font-family: serif; font-size: 21px; }
 .kind-grid button.selected { border-color: #a42d2d; box-shadow: inset 0 0 0 1px #a42d2d; background: rgba(226, 89, 63, 0.13); }
 .goal-class-row { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 20px; }
 .goal-class-row > span { width: 100%; color: #796950; font-size: 12px; }
-.goal-class-row button { border: 1px solid var(--line); border-radius: 99px; padding: 8px 12px; background: transparent; }
+.goal-class-row button { border: 1px solid var(--line); border-radius: var(--r-md); padding: 8px 12px; background: transparent; }
 .goal-class-row button.selected { background: #403b31; border-color: #403b31; color: white; }
 .sheet-field { display: grid; gap: 7px; margin-bottom: 15px; }
 .sheet-field > span, .subtask-editor-head > span { color: #6b5941; font-size: 12px; font-weight: 750; }
@@ -5943,7 +5784,7 @@ button.hud-card {
   width: 100%;
   min-height: 48px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: var(--paper-soft);
   padding: 0 13px;
   font: inherit;
@@ -5951,27 +5792,27 @@ button.hud-card {
 .sheet-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .sheet-check { display: flex !important; align-items: flex-start; gap: 9px; margin: 13px 0; color: #574a38; font-size: 14px; }
 .sheet-check input { width: 18px; height: 18px; flex: 0 0 auto; }
-.sheet-note { padding: 14px; border-radius: 12px; background: var(--paper-deep); color: var(--ink-soft); font-size: 13px; }
+.sheet-note { padding: 14px; border-radius: var(--r-md); background: var(--paper-deep); color: var(--ink-soft); font-size: 13px; }
 .weekday-picker { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 4px 0 18px; }
 .weekday-picker button { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 50%; background: var(--paper-soft); }
 .weekday-picker button.selected { background: #a42d2d; border-color: #a42d2d; color: white; }
 .icon-picker.compact { margin: 14px 0; }
-.subtask-editor { margin: 8px 0 18px; padding: 13px; border-radius: 14px; background: var(--paper-deep); }
+.subtask-editor { margin: 8px 0 18px; padding: 13px; border-radius: var(--r-md); background: var(--paper-deep); }
 .subtask-editor-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
 .subtask-editor-head button { border: 0; background: transparent; color: #9a302b; font-weight: 700; }
 .subtask-draft { display: grid; grid-template-columns: 1fr 128px 82px; gap: 6px; margin: 6px 0; }
-.subtask-draft input { min-width: 0; height: 40px; border: 1px solid var(--line); border-radius: 9px; background: white; padding: 0 9px; }
+.subtask-draft input { min-width: 0; height: 40px; border: 1px solid var(--line); border-radius: var(--r-sm); background: white; padding: 0 9px; }
 .subtask-draft button { border: 0; background: transparent; }
 .subtask-order { display: flex; align-items: center; }
 .subtask-order button { width: 26px; height: 34px; padding: 0; }
-.goal-draft-summary { margin: 0 20px 14px; padding: 12px 14px; border-left: 3px solid #b64135; border-radius: 5px 12px 12px 5px; background: var(--paper-soft); }
+.goal-draft-summary { margin: 0 20px 14px; padding: 12px 14px; border-left: 3px solid #b64135; border-radius: var(--r-sm) var(--r-md) var(--r-md) var(--r-sm); background: var(--paper-soft); }
 .goal-draft-summary span { color: #8b7150; font-size: 11px; font-weight: 700; }
 .goal-draft-summary p { margin: 3px 0 0; font-size: 13px; font-weight: 650; }
 .goal-sheet-actions { position: sticky; bottom: 0; display: grid; grid-template-columns: minmax(90px, .45fr) 1fr; gap: 9px; padding: 12px 20px max(14px, env(safe-area-inset-bottom)); background: rgba(29, 36, 71, .97); border-top: 1px solid #ded3c1; }
 .goal-menu { position: relative; z-index: 5; }
-.goal-menu-trigger { min-width: 34px; height: 32px; border: 0; border-radius: 9px; background: var(--paper-deep); color: var(--ink-soft); letter-spacing: 2px; }
-.goal-menu-popover { position: absolute; right: 0; top: 37px; z-index: 20; display: grid; width: 172px; padding: 6px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper-soft); box-shadow: 0 12px 35px rgba(40, 30, 18, .2); }
-.goal-menu-popover button { border: 0; border-radius: 8px; padding: 10px 11px; background: transparent; color: #41372b; text-align: left; }
+.goal-menu-trigger { min-width: 34px; height: 32px; border: 0; border-radius: var(--r-sm); background: var(--paper-deep); color: var(--ink-soft); letter-spacing: 2px; }
+.goal-menu-popover { position: absolute; right: 0; top: 37px; z-index: 20; display: grid; width: 172px; padding: 6px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--paper-soft); box-shadow: 0 12px 35px rgba(40, 30, 18, .2); }
+.goal-menu-popover button { border: 0; border-radius: var(--r-sm); padding: 10px 11px; background: transparent; color: #41372b; text-align: left; }
 .goal-menu-popover button:hover { background: var(--paper-soft); }
 .goal-menu-popover .danger { color: #ad312b; }
 .goal-menu-portal {
@@ -6005,36 +5846,36 @@ button.hud-card {
 .goal-top-actions { display: flex; align-items: center; gap: 7px; }
 .goal-schedule-line { margin: 5px 0 10px; color: #806d52; font-size: 12px; }
 .week-view { padding: 14px 0 40px; }
-.week-hero { display: flex; justify-content: space-between; gap: 14px; align-items: flex-end; margin-bottom: 16px; padding: 22px; border-radius: 20px; background: linear-gradient(145deg, #39382f, #64543e); color: #fffaf0; }
+.week-hero { display: flex; justify-content: space-between; gap: 14px; align-items: flex-end; margin-bottom: 16px; padding: 22px; border-radius: var(--r-md); background: linear-gradient(145deg, #39382f, #64543e); color: #fffaf0; }
 .week-hero p { margin: 0; color: #e5c79f; font-size: 12px; font-weight: 800; letter-spacing: .12em; }
 .week-hero h2 { margin: 3px 0 5px; font-size: 25px; }
 .week-hero span { color: #e9e0d1; font-size: 13px; }
-.week-hero button { flex: 0 0 auto; border: 1px solid rgba(255,255,255,.35); border-radius: 12px; padding: 11px 13px; background: #a53932; color: white; font-weight: 700; }
+.week-hero button { flex: 0 0 auto; border: 1px solid rgba(255,255,255,.35); border-radius: var(--r-md); padding: 11px 13px; background: #a53932; color: white; font-weight: 700; }
 .week-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.week-card { padding: 18px; border: 1px solid var(--line); border-radius: 18px; background: rgba(29, 36, 71, .85); box-shadow: 0 5px 20px rgba(57, 41, 23, .04); }
+.week-card { padding: 18px; border: 1px solid var(--line); border-radius: var(--r-md); background: rgba(29, 36, 71, .85); box-shadow: 0 5px 20px rgba(57, 41, 23, .04); }
 .week-card > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .week-card > header > div { display: flex; align-items: center; gap: 8px; }
-.week-card > header span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--paper-deep); color: #9b3a30; font-family: serif; }
+.week-card > header span { display: grid; place-items: center; width: 30px; height: 30px; border-radius: var(--r-md); background: var(--paper-deep); color: #9b3a30; font-family: serif; }
 .week-card h3 { margin: 0; font-size: 16px; }
-.week-card header button, .week-result-row button, .kpi-entry button { border: 0; border-radius: 8px; padding: 7px 9px; background: var(--paper-deep); color: var(--ink-soft); }
+.week-card header button, .week-result-row button, .kpi-entry button { border: 0; border-radius: var(--r-sm); padding: 7px 9px; background: var(--paper-deep); color: var(--ink-soft); }
 .week-card article { display: flex; align-items: center; gap: 9px; padding: 10px 0; border-top: 1px solid #eee4d4; }
 .week-card article > div:nth-child(2), .week-card article > div:first-child { flex: 1; min-width: 0; }
 .week-card article strong { display: block; font-size: 14px; }
 .week-card article span { display: block; margin-top: 3px; color: #85735b; font-size: 11px; }
 .commitments article > button:first-child { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: transparent; color: white; }
 .commitments article > button.checked { border-color: #52735d; background: #52735d; }
-.week-progress { height: 7px; overflow: hidden; border-radius: 99px; background: var(--paper-deep); }
+.week-progress { height: 7px; overflow: hidden; border-radius: var(--r-md); background: var(--paper-deep); }
 .week-progress i { display: block; height: 100%; border-radius: inherit; background: #b34337; }
 .season-week-progress > strong { display: block; margin-bottom: 7px; }
 .season-week-progress p { display: flex; justify-content: space-between; gap: 10px; margin: 7px 0; font-size: 13px; }
 .week-card.overdue { border-color: #ddb4a9; background: rgba(226, 89, 63, 0.13); }
 .week-card.overdue article > div:last-child { display: flex; gap: 5px; }
-.week-review-cta { width: 100%; margin-top: 12px; border: 0; border-radius: 15px; padding: 16px; background: #a3342f; color: white; font-weight: 750; }
-.kpi-create { display: grid; gap: 7px; margin-bottom: 12px; padding: 11px; border-radius: 12px; background: var(--paper-deep); }
+.week-review-cta { width: 100%; margin-top: 12px; border: 0; border-radius: var(--r-md); padding: 16px; background: #a3342f; color: white; font-weight: 750; }
+.kpi-create { display: grid; gap: 7px; margin-bottom: 12px; padding: 11px; border-radius: var(--r-md); background: var(--paper-deep); }
 .kpi-list article { align-items: flex-start; }
 .kpi-list article small { display: block; margin-top: 3px; color: #9a876b; }
 .kpi-entry { display: flex; gap: 5px; }
-.kpi-entry input { min-width: 0; width: 100%; height: 36px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; }
+.kpi-entry input { min-width: 0; width: 100%; height: 36px; border: 1px solid var(--line); border-radius: var(--r-sm); padding: 0 8px; }
 .project-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
 .project-card-head h3 { margin: 3px 0 10px; font-size: 17px; }
 .project-eyebrow { color: #8f6f49; font-size: 11px; font-weight: 700; }
@@ -6045,19 +5886,19 @@ button.hud-card {
 .project-task-list li.done span { color: #978b79; text-decoration: line-through; }
 .project-task-list time { color: #90785a; font-size: 11px; }
 .task-quick-actions { grid-column: 1 / -1; display: flex; gap: 5px; padding-left: 25px; }
-.task-quick-actions button { border: 0; border-radius: 7px; padding: 5px 8px; background: var(--paper-deep); color: #715b3f; font-size: 11px; }
-.project-complete-suggest { width: 100%; margin-top: 10px; border: 1px solid #769079; border-radius: 10px; padding: 10px; background: var(--paper-soft); color: #36533c; }
+.task-quick-actions button { border: 0; border-radius: var(--r-sm); padding: 5px 8px; background: var(--paper-deep); color: #715b3f; font-size: 11px; }
+.project-complete-suggest { width: 100%; margin-top: 10px; border: 1px solid #769079; border-radius: var(--r-md); padding: 10px; background: var(--paper-soft); color: #36533c; }
 .board-collapsible { margin-top: 14px; border-top: 1px solid #e2d7c5; padding-top: 12px; }
 .board-collapsible summary { cursor: pointer; color: #665641; font-size: 13px; font-weight: 700; }
 .board-collapsible summary b { float: right; }
-.friend-today-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px; border-radius: 13px; background: var(--paper-deep); }
-.friend-today-summary button { border: 0; border-radius: 9px; padding: 8px 10px; background: #a63a33; color: white; }
-.season-auto-create { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 15px 0; border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.friend-today-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 13px; border-radius: var(--r-md); background: var(--paper-deep); }
+.friend-today-summary button { border: 0; border-radius: var(--r-sm); padding: 8px 10px; background: #a63a33; color: white; }
+.season-auto-create { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 15px 0; border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px; }
 .season-auto-create legend { padding: 0 6px; color: #685840; font-size: 12px; font-weight: 700; }
 .season-auto-create label { display: flex; align-items: center; gap: 7px; font-size: 13px; }
-.season-routine-settings { margin: 12px 0; padding: 12px; border-radius: 13px; background: var(--paper-deep); }
+.season-routine-settings { margin: 12px 0; padding: 12px; border-radius: var(--r-md); background: var(--paper-deep); }
 .review-auto-summary { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin: 0 0 16px; }
-.review-auto-summary div { padding: 9px 5px; border-radius: 10px; background: var(--paper-deep); text-align: center; }
+.review-auto-summary div { padding: 9px 5px; border-radius: var(--r-md); background: var(--paper-deep); text-align: center; }
 .review-auto-summary span { display: block; color: #806d53; font-size: 9px; }
 .review-auto-summary strong { display: block; margin-top: 3px; font-size: 16px; }
 
@@ -6090,7 +5931,7 @@ button.hud-card {
   margin: -6px 4px 16px;
   padding: 9px 12px 9px 15px;
   border: 1px dashed rgba(46, 107, 94, 0.38);
-  border-radius: 18px;
+  border-radius: var(--r-md);
   background:
     radial-gradient(circle at 15% 20%, rgba(181, 50, 40, 0.11), transparent 30%),
     rgba(29, 36, 71, 0.7);
@@ -6143,7 +5984,7 @@ button.hud-card {
   bottom: -8px;
   min-width: 30px;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--sel);
   color: var(--on-sel);
   font-size: 9px;
@@ -6180,7 +6021,7 @@ button.hud-card {
   margin-left: auto;
   padding: 9px 12px;
   border: 1px solid rgba(138, 36, 29, 0.32);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--stamp-red);
   color: white;
   box-shadow: 0 4px 0 var(--stamp-red-deep);
@@ -6247,7 +6088,7 @@ button.hud-card {
   max-width: 220px;
   padding: 7px 10px;
   border: 3px solid var(--ink);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--paper-soft);
   color: var(--ink);
   font-size: clamp(11px, 2vw, 18px);
@@ -6369,7 +6210,7 @@ button.hud-card {
   min-width: 0;
   padding: 10px 13px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.78);
   color: var(--ink);
   text-align: left;
@@ -6439,7 +6280,7 @@ button.hud-card {
   margin: 0;
   padding: 13px;
   border: 1px dashed var(--line);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   color: var(--ink-soft);
   font-size: 12px;
   text-align: center;
@@ -6453,7 +6294,7 @@ button.hud-card {
   margin-bottom: 13px;
   padding: 13px 15px;
   border: 1px solid rgba(46, 107, 94, 0.25);
-  border-radius: 15px;
+  border-radius: var(--r-md);
   background: linear-gradient(135deg, var(--paper-soft), var(--paper-soft));
 }
 
@@ -6475,7 +6316,7 @@ button.hud-card {
 .friend-week-banner button,
 .friend-week-actions button {
   border: 0;
-  border-radius: 11px;
+  border-radius: var(--r-md);
   padding: 10px 12px;
   background: var(--teal);
   color: white;
@@ -6495,7 +6336,7 @@ button.hud-card {
 .friend-kpi-value {
   align-self: center;
   padding: 7px 9px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background: var(--paper-deep);
   color: #5f513f;
   font-size: 12px;
@@ -6520,7 +6361,7 @@ button.hud-card {
 
 .friend-review-card dl > div {
   padding: 11px;
-  border-radius: 11px;
+  border-radius: var(--r-md);
   background: var(--paper-soft);
 }
 
@@ -6569,7 +6410,7 @@ button.hud-card {
     grid-column: 1 / -1;
     width: 100%;
     height: 5px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     color: transparent;
     font-size: 0;
   }
@@ -6603,10 +6444,12 @@ button.hud-card {
   --night-line: rgba(242, 234, 214, 0.14);
 
   /* 이름은 유지하되 값은 밤으로 뒤집는다 (기존 var 사용처가 그대로 따라온다) */
-  --paper: #0b0f1e; /* 페이지 바닥 */
-  --paper-deep: #1b2240; /* 눌린 면 — 게이지·트랙 */
-  --paper-card: #131a33; /* 카드 */
-  --paper-soft: #1d2447; /* 떠 있는 면 — 입력창 */
+  /* 면은 불투명한 상자가 아니라 마을 위에 덮인 유리 — 뒤의 세계가 비쳐야
+     화면이 "쌓인 카드"가 아니라 하나의 장소로 읽힌다. */
+  --paper: transparent; /* 페이지 바닥은 배경 마을이 맡는다 */
+  --paper-deep: rgba(27, 34, 64, 0.82); /* 눌린 면 — 게이지·트랙 */
+  --paper-card: rgba(19, 26, 51, 0.72); /* 카드 */
+  --paper-soft: rgba(29, 36, 71, 0.74); /* 떠 있는 면 — 입력창 */
 
   /* 등불빛 글자 */
   --ink: #f2ead6;
@@ -6631,21 +6474,32 @@ button.hud-card {
   --sel: linear-gradient(135deg, #e2593f, #b8381f);
   --on-sel: #fff3e8;
 
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
-  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.34);
-  --radius: 18px;
+  /* 배경이 살아 있으면 그림자로 카드를 띄울 이유가 없다.
+     정말 떠 있어야 하는 것(모달·시트·토스트)만 --shadow-lift를 따로 쓴다. */
+  --shadow: none;
+  --shadow-soft: none;
+  --shadow-lift: 0 24px 70px rgba(0, 0, 0, 0.55);
+  --radius: var(--r-md);
+}
+
+/* 진짜로 화면 위에 떠 있는 것들만 그림자를 돌려받는다 */
+.toast,
+.village-panel,
+.goal-sheet,
+.add-goal,
+.history-note {
+  box-shadow: var(--shadow-lift);
 }
 
 ::selection {
   background: rgba(226, 89, 63, 0.32);
 }
 
+/* 배경 무늬는 이제 마을(VillageBackdrop)이 맡는다.
+   body는 캔버스가 뜨기 전/뒤를 받치는 바닥색만 갖는다. */
 body {
-  background:
-    radial-gradient(circle at 12% -5%, rgba(226, 89, 63, 0.12), transparent 30rem),
-    radial-gradient(circle at 88% 8%, rgba(29, 36, 71, 0.1), transparent 32rem),
-    var(--paper);
-  background-attachment: fixed;
+  background: var(--night);
+  background-image: none;
   letter-spacing: -0.012em;
   color: var(--ink);
 }
@@ -6661,7 +6515,7 @@ input,
 textarea,
 select {
   border-color: var(--line) !important;
-  border-radius: 12px !important;
+  border-radius: var(--r-md) !important;
   background: rgba(29, 36, 71, 0.82) !important;
   color: var(--ink);
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
@@ -6703,7 +6557,7 @@ select:focus {
 .masthead h1 .stamp-dot {
   width: 9px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--stamp-red);
   transform: none;
 }
@@ -6720,7 +6574,7 @@ select:focus {
 .masthead .who {
   padding: 9px 12px;
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(29, 36, 71, 0.7);
   box-shadow: none;
   font-size: 11px;
@@ -6745,7 +6599,7 @@ select:focus {
   margin: 0 0 14px;
   padding: 8px 10px 8px 13px;
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 16px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.72);
   box-shadow: 0 8px 24px rgba(20, 25, 54, 0.045);
   backdrop-filter: blur(16px);
@@ -6786,7 +6640,7 @@ select:focus {
   margin-bottom: 22px;
   padding: 5px;
   border: 1px solid rgba(20, 25, 54, 0.1);
-  border-radius: 17px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.86);
   box-shadow: 0 12px 32px rgba(20, 25, 54, 0.09);
   backdrop-filter: blur(20px) saturate(1.2);
@@ -6795,7 +6649,7 @@ select:focus {
 .view-tabs button {
   min-width: 108px;
   padding: 10px 13px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   color: #74736d;
   font-size: 12px;
   font-weight: 650;
@@ -6823,7 +6677,7 @@ select:focus {
   margin-bottom: 18px;
   padding: 26px 27px 20px;
   border: 0;
-  border-radius: 28px;
+  border-radius: var(--r-md);
   background:
     radial-gradient(circle at 88% 15%, rgba(183, 150, 101, 0.18), transparent 26%),
     linear-gradient(135deg, #20211e, #30312c);
@@ -6893,7 +6747,7 @@ select:focus {
 
 .cadence-prompt {
   border: 1px solid rgba(47, 133, 119, 0.15);
-  border-radius: 18px;
+  border-radius: var(--r-md);
   background: var(--paper-soft);
   box-shadow: none;
 }
@@ -6904,7 +6758,7 @@ select:focus {
 .memo-panel,
 .message-board {
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 22px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.88);
   box-shadow: var(--shadow-soft);
 }
@@ -6930,7 +6784,7 @@ select:focus {
 
 .big-goal-card {
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 16px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.7);
 }
 
@@ -6968,7 +6822,7 @@ select:focus {
 .goal-card {
   padding: 18px;
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 18px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.82);
   box-shadow: 0 8px 24px rgba(20, 25, 54, 0.055);
 }
@@ -6988,7 +6842,7 @@ select:focus {
 .goal-title .icon {
   width: 34px;
   height: 34px;
-  border-radius: 11px;
+  border-radius: var(--r-md);
   background: var(--paper-deep);
 }
 
@@ -6999,7 +6853,7 @@ select:focus {
 
 .goal-menu-popover {
   border-color: rgba(20, 25, 54, 0.1);
-  border-radius: 14px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.82);
   box-shadow: 0 20px 55px rgba(20, 25, 54, 0.18);
 }
@@ -7011,7 +6865,7 @@ select:focus {
 
 .goal-cue,
 .goal-thread {
-  border-radius: 10px;
+  border-radius: var(--r-md);
 }
 
 .stamp-circle {
@@ -7026,7 +6880,7 @@ select:focus {
 }
 
 .min-row {
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: var(--paper-soft);
 }
 
@@ -7049,7 +6903,7 @@ select:focus {
 .week-hero {
   padding: 26px;
   border: 0;
-  border-radius: 26px;
+  border-radius: var(--r-md);
   background:
     radial-gradient(circle at 88% 14%, rgba(183, 150, 101, 0.18), transparent 28%),
     linear-gradient(135deg, #242520, #383934);
@@ -7068,7 +6922,7 @@ select:focus {
 .week-hero button,
 .week-review-cta {
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: var(--stamp-red);
   box-shadow: 0 8px 22px rgba(94, 23, 34, 0.24);
 }
@@ -7081,7 +6935,7 @@ select:focus {
 }
 
 .week-people > button {
-  border-radius: 17px;
+  border-radius: var(--r-md);
 }
 
 .week-people > button.selected {
@@ -7092,11 +6946,11 @@ select:focus {
 
 .week-card {
   padding: 20px;
-  border-radius: 20px;
+  border-radius: var(--r-md);
 }
 
 .week-card > header span {
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--paper-soft);
   color: var(--stamp-red);
 }
@@ -7113,7 +6967,7 @@ select:focus {
 .design-intro {
   padding: 27px;
   border: 0;
-  border-radius: 26px;
+  border-radius: var(--r-md);
   background:
     radial-gradient(circle at 90% 20%, rgba(183, 150, 101, 0.16), transparent 28%),
     linear-gradient(135deg, #20211e, #32332e);
@@ -7138,25 +6992,22 @@ select:focus {
 
 .design-subnav,
 .person-switch,
-.section-switch,
 .reflection-tabs {
   padding: 4px;
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 15px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.84);
 }
 
 .design-subnav button,
 .person-switch button,
-.section-switch button,
 .reflection-tabs button {
   border: 0;
-  border-radius: 11px;
+  border-radius: var(--r-md);
 }
 
 .design-subnav button.active,
 .person-switch button.active,
-.section-switch button.active,
 .reflection-tabs button.selected {
   background: #242520;
   color: white;
@@ -7167,17 +7018,13 @@ select:focus {
   min-height: 210px;
   padding: 32px;
   border: 0;
-  border-radius: 28px;
+  border-radius: var(--r-md);
   box-shadow: 0 22px 54px rgba(20, 25, 54, 0.16);
 }
 
 .life-hero::before {
   opacity: 0.045;
   background-size: 36px 36px;
-}
-
-.compass-hero {
-  background: linear-gradient(135deg, #1f2b28, #36574f);
 }
 
 .season-hero {
@@ -7195,7 +7042,6 @@ select:focus {
 }
 
 .life-paper,
-.domain-detail,
 .season-read,
 .season-form,
 .review-form,
@@ -7204,25 +7050,24 @@ select:focus {
 .ai-report,
 .ai-draft,
 .ai-workbench {
-  border: 1px solid rgba(20, 25, 54, 0.08) !important;
-  border-radius: 20px !important;
-  background: rgba(29, 36, 71, 0.92) !important;
-  box-shadow: 0 10px 30px rgba(20, 25, 54, 0.045) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--r-md) !important;
+  background: var(--paper-card) !important;
+  box-shadow: none !important;
 }
 
-.domain-grid > button,
 .life-item-form,
 .decision-form,
 .review-auto-summary div,
 .season-routine-settings,
 .season-auto-create {
   border-color: rgba(20, 25, 54, 0.08) !important;
-  border-radius: 15px !important;
+  border-radius: var(--r-md) !important;
   background: var(--paper-soft) !important;
 }
 
 .ai-hero {
-  border-radius: 28px;
+  border-radius: var(--r-md);
   box-shadow: 0 22px 54px rgba(20, 25, 54, 0.15);
 }
 
@@ -7233,13 +7078,13 @@ select:focus {
 .history-who {
   padding: 3px;
   border-color: rgba(20, 25, 54, 0.08);
-  border-radius: 13px;
+  border-radius: var(--r-md);
   background: var(--paper-soft);
 }
 
 .history-who button {
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: transparent;
 }
 
@@ -7248,7 +7093,7 @@ select:focus {
 }
 
 .history-cell {
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background: var(--paper-soft);
 }
 
@@ -7260,7 +7105,7 @@ select:focus {
 .village-panel,
 .goal-sheet {
   border: 1px solid rgba(20, 25, 54, 0.09);
-  border-radius: 24px;
+  border-radius: var(--r-md);
   background: var(--paper-card);
   box-shadow: 0 30px 90px rgba(20, 25, 54, 0.22);
 }
@@ -7288,7 +7133,7 @@ select:focus {
 .life-save,
 .life-add-button,
 .ai-generate {
-  border-radius: 11px !important;
+  border-radius: var(--r-md) !important;
   background: var(--stamp-red) !important;
   box-shadow: 0 8px 20px rgba(94, 23, 34, 0.18);
 }
@@ -7297,7 +7142,7 @@ select:focus {
 .life-empty,
 .mini-empty {
   border-color: rgba(20, 25, 54, 0.12);
-  border-radius: 14px;
+  border-radius: var(--r-md);
   background: rgba(29, 36, 71, 0.7);
 }
 
@@ -7316,7 +7161,7 @@ select:focus {
 .gate-panel,
 .gate-card {
   border: 1px solid rgba(20, 25, 54, 0.08);
-  border-radius: 28px;
+  border-radius: var(--r-md);
   box-shadow: 0 35px 100px rgba(20, 25, 54, 0.13);
 }
 
@@ -7330,7 +7175,7 @@ select:focus {
 
 .gate-panel::after {
   border-color: rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  border-radius: var(--r-md);
 }
 
 .gate-kicker {
@@ -7401,7 +7246,7 @@ select:focus {
   .week-hero,
   .design-intro,
   .life-hero {
-    border-radius: 22px;
+    border-radius: var(--r-md);
   }
 
   .board-head {
@@ -7427,14 +7272,14 @@ select:focus {
   .history,
   .memo-panel,
   .message-board {
-    border-radius: 18px;
+    border-radius: var(--r-md);
     padding: 15px;
   }
 
   .goal-card,
   .week-card,
   .life-paper {
-    border-radius: 16px !important;
+    border-radius: var(--r-md) !important;
   }
 
   .life-hero {
@@ -7448,7 +7293,7 @@ select:focus {
 
   .gate-panel,
   .gate-card {
-    border-radius: 22px;
+    border-radius: var(--r-md);
   }
 
   .gate-panel,
@@ -7459,69 +7304,117 @@ select:focus {
 
 /* ---------- 저녁 마을 히어로 (오늘 화면의 문) ---------- */
 
-.village-hero {
-  position: relative;
-  border-radius: 26px;
-  overflow: hidden;
-  min-height: 300px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  margin-bottom: 18px;
-  box-shadow:
-    0 24px 48px -24px rgba(10, 12, 24, 0.7),
-    0 0 0 1px rgba(240, 233, 214, 0.08);
-  isolation: isolate;
+/* 마을은 이제 카드가 아니라 앱 전체의 배경이다.
+   화면에 고정되어 모든 탭이 같은 세계 위에 뜬다. */
+.village-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
-.village-hero-canvas {
+.village-backdrop-canvas {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   display: block;
-  z-index: 0;
 }
 
-.village-hero-veil {
+/* 스크롤해서 본문으로 들어갈수록 짙어지는 장막 — 위는 풍경, 아래는 읽기 좋은 면.
+   최소 농도(--backdrop-veil-min)는 시간대에 따라 VillageBackdrop이 정한다. */
+.village-backdrop-veil {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    rgba(10, 12, 24, 0.74) 0%,
-    rgba(10, 12, 24, 0.34) 28%,
-    rgba(10, 12, 24, 0.06) 48%,
-    rgba(10, 12, 24, 0.42) 76%,
-    rgba(10, 12, 24, 0.88) 100%
-  );
+  background: var(--night, #0b0f1e);
+  opacity: var(--backdrop-veil, var(--backdrop-veil-min, 0.16));
 }
 
-.village-hero.phase-day .village-hero-veil {
-  background: linear-gradient(
-    180deg,
-    rgba(20, 30, 50, 0.66) 0%,
-    rgba(20, 30, 50, 0.26) 30%,
-    rgba(20, 30, 50, 0.02) 50%,
-    rgba(16, 20, 39, 0.4) 76%,
-    rgba(16, 20, 39, 0.86) 100%
-  );
+/* 스크롤 구간은 브라우저가 컴포지터에서 직접 돌린다 — 스크롤 중 JS가 한 줄도 안 돈다.
+   미지원 브라우저는 VillageBackdrop의 JS 폴백이 --backdrop-veil로 같은 값을 쓴다. */
+@supports (animation-timeline: scroll()) {
+  .village-backdrop-veil {
+    opacity: var(--backdrop-veil-min, 0.16);
+    animation: backdrop-veil linear forwards;
+    animation-timeline: scroll(root block);
+    animation-range: 0 620px;
+  }
+
+  @keyframes backdrop-veil {
+    to {
+      opacity: 0.84;
+    }
+  }
 }
 
-.village-hero-top,
-.village-hero-bottom {
+/* 움직임을 줄여달라고 한 사람에겐 스크롤 연동을 끄고 읽기 좋은 농도로 고정 */
+@media (prefers-reduced-motion: reduce) {
+  .village-backdrop-veil {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* ---------- 탭 전환 (View Transitions) ----------
+   장면과 장면 사이의 카메라 무브. 눈에 띄면 실패다 — 280ms 안에 끝난다.
+   핵심은 마을이 전환에서 빠진다는 것: 화면은 바뀌어도 세계는 그대로 있는다. */
+.village-backdrop {
+  view-transition-name: village-world;
+}
+
+::view-transition-old(village-world),
+::view-transition-new(village-world) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 280ms;
+    animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  ::view-transition-old(root) {
+    animation-name: vt-scene-out;
+  }
+
+  ::view-transition-new(root) {
+    animation-name: vt-scene-in;
+  }
+
+  @keyframes vt-scene-out {
+    to {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  @keyframes vt-scene-in {
+    from {
+      opacity: 0;
+      transform: translateY(9px);
+    }
+  }
+}
+
+/* 본문은 배경 위에 뜬다 */
+.shell {
   position: relative;
-  z-index: 2;
-  padding: 20px 20px 0;
+  z-index: 1;
 }
 
-.village-hero-bottom {
-  padding: 0 20px 18px;
+/* 오늘 화면의 첫 장면 — 상자가 없다. 배경 마을 위에 글자만 얹힌다. */
+.village-hero {
+  position: relative;
+  min-height: min(62vh, 460px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  margin-bottom: 28px;
 }
 
 .vh-hi {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   font-size: 12px;
   letter-spacing: 0.06em;
   color: #f6cd76;
@@ -7529,49 +7422,53 @@ select:focus {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
 }
 
-.vh-line {
-  margin: 0;
+/* 화면에서 압도적으로 큰 것 하나.
+   왼쪽 여백 밖으로 흘러나가 상자 정렬을 깨뜨린다 (이 화면의 유일한 비대칭). */
+.vh-figure {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-left: -0.07em;
+  line-height: 0.82;
+}
+
+.vh-big {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 25px;
+  font-size: clamp(112px, 22vw, 208px);
+  line-height: 0.8;
+  color: #f7f0dd;
+  letter-spacing: -0.05em;
+  text-shadow: 0 6px 40px rgba(0, 0, 0, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+
+.vh-big.perfect {
+  color: #f6cd76;
+  text-shadow: 0 0 60px rgba(246, 205, 118, 0.45), 0 6px 40px rgba(0, 0, 0, 0.5);
+}
+
+.vh-of {
+  font-family: var(--font-display);
+  font-size: clamp(24px, 5vw, 40px);
+  color: rgba(244, 237, 219, 0.5);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.vh-line {
+  margin: 10px 0 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: clamp(20px, 3.4vw, 27px);
   line-height: 1.32;
   color: #f4eddb;
   text-wrap: balance;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
-.vh-count {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-  margin-bottom: 12px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: rgba(16, 20, 39, 0.52);
-  border: 1px solid rgba(240, 233, 214, 0.16);
-  backdrop-filter: blur(6px);
-  color: #f4eddb;
-}
-
-.vh-count strong {
-  font-family: var(--font-display);
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.vh-count span {
-  font-size: 13px;
-  opacity: 0.7;
-}
-
-.vh-count em {
-  font-style: normal;
-  font-size: 11px;
-  margin-left: 6px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(240, 233, 214, 0.25);
-  opacity: 0.85;
+.vh-foot {
+  margin-top: 22px;
+  max-width: 420px;
 }
 
 .vh-enter {
@@ -7580,7 +7477,7 @@ select:focus {
   gap: 10px;
   width: 100%;
   padding: 10px 14px;
-  border-radius: 18px;
+  border-radius: var(--r-md);
   border: 1px solid rgba(240, 233, 214, 0.18);
   background: rgba(16, 20, 39, 0.55);
   backdrop-filter: blur(8px);
@@ -7608,7 +7505,7 @@ select:focus {
   flex: 1;
   min-width: 0;
   height: 7px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   background: rgba(29, 36, 71, 0.16);
   overflow: hidden;
 }
@@ -7617,7 +7514,7 @@ select:focus {
   display: block;
   height: 100%;
   min-width: 4px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   background: linear-gradient(90deg, var(--paper-deep), #ef6a4d);
   transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -7637,12 +7534,7 @@ select:focus {
 
 @media (max-width: 480px) {
   .village-hero {
-    min-height: 268px;
-    border-radius: 22px;
-  }
-
-  .vh-line {
-    font-size: 21px;
+    min-height: 56vh;
   }
 
   .vh-enter-label {

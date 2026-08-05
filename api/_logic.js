@@ -22,6 +22,11 @@ const CHECKIN_KEEP_DAYS = 400; // 기록 뷰(1년)용. 넘으면 아카이브 �
 const PROGRESS_KEEP_DAYS = 90; // 넘으면 목표당 한 건으로 합침
 const EXCUSE_KEEP_DAYS = 180; // 반성 노트 보관 기간
 
+// 못 찍은 이유를 며칠 전 것까지 남길 수 있는지.
+// 도장(성과)은 오늘/어제만 허용하지만, 이유는 여행·출장으로 며칠 비었을 때도
+// 돌아와서 채울 수 있어야 기록이 통째로 사라지지 않는다.
+export const EXCUSE_BACKFILL_DAYS = 7;
+
 // 매번 새 객체를 만든다 — 모듈 레벨 상수를 공유하면 normalize 결과를 통해
 // 기본값의 배열/객체가 참조로 새어나가 뮤테이션에 오염된다 (웜 인스턴스에서 실제 버그)
 export function emptyState() {
@@ -1263,31 +1268,36 @@ export function applyAction(state, body, user) {
     }
 
     case "addExcuse": {
-      // 어제 못 찍은 매일 목표에 이유를 남긴다 (기록 탭 반성 노트에 쌓임)
+      // 최근 EXCUSE_BACKFILL_DAYS일 안에 못 찍은 매일 목표에 이유를 남긴다.
+      // 도장은 여전히 오늘/어제만 — 성과는 소급 못 하지만 "왜 못 했는지"는 며칠 뒤에도 남길 수 있다.
+      // 여행·출장으로 이틀 이상 비었을 때 기록이 통째로 사라지는 걸 막는다. (기록 탭 반성 노트에 쌓임)
       const goal = findGoal(state, str(body.goalId, 40));
       const text = str(body.text, 100);
-      const yesterday = shiftDate(today, -1);
+      const date = cleanDate(body.date) || shiftDate(today, -1);
       if (!goal || !text) return { error: "invalid excuse", status: 400 };
       if (goal.owner !== user) return { error: "본인 목표에만 쓸 수 있어요", status: 403 };
       if (goal.type !== "daily") return { error: "매일 목표에만 이유를 남겨요", status: 400 };
-      if (goal.createdAt && goal.createdAt > yesterday) {
-        return { error: "어제는 없던 목표예요", status: 400 };
+      if (date >= today || date < shiftDate(today, -EXCUSE_BACKFILL_DAYS)) {
+        return { error: `지난 ${EXCUSE_BACKFILL_DAYS}일 안의 지나간 날에만 이유를 남길 수 있어요`, status: 400 };
       }
-      if (state.checkins.some((c) => c.goalId === goal.id && c.date === yesterday)) {
-        return { error: "어제 도장을 이미 찍었어요", status: 400 };
+      if (goal.createdAt && goal.createdAt > date) {
+        return { error: "그날은 없던 목표예요", status: 400 };
       }
-      const existing = state.excuses.find((x) => x.goalId === goal.id && x.date === yesterday);
+      if (state.checkins.some((c) => c.goalId === goal.id && c.date === date)) {
+        return { error: "그날 도장을 이미 찍었어요", status: 400 };
+      }
+      const existing = state.excuses.find((x) => x.goalId === goal.id && x.date === date);
       if (existing) existing.text = text;
-      else state.excuses.push({ id: newId("x"), goalId: goal.id, owner: user, date: yesterday, text });
+      else state.excuses.push({ id: newId("x"), goalId: goal.id, owner: user, date, text });
       if (existing) return {};
       const award = awardPersonalXp(state, {
         recipientId: user,
         eventType: "FAILURE_REASON_RECORDED",
         sourceType: "DAILY_GOAL",
         sourceId: goal.id,
-        dateKey: yesterday,
+        dateKey: date,
         amount: XP_REWARDS.FAILURE_REASON_RECORDED,
-        dedupeKey: `failure-reason:${user}:${goal.id}:${yesterday}`,
+        dedupeKey: `failure-reason:${user}:${goal.id}:${date}`,
         metadata: { goalTitle: goal.title },
       });
       return { xpAwards: [award] };
