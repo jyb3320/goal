@@ -7,6 +7,9 @@ import { reducedMotion } from "../lib/fx.js";
 // - 하늘은 지금 시각을 따른다 (sky.js)
 // - 스크롤하면 풍경이 느리게 따라오고(시차), 본문에 들어갈수록 장막이 짙어져 글이 읽힌다
 // - 도장이 쌓이면 나무가 "자라나며" 등장한다 (스크롤 기믹이 아니라 상태 변화에 붙은 모션)
+// - 두 사람은 PhotoDuo와 같은 실제 사진(원형으로 자름)으로 그려진다. 이미지가
+//   아직 준비되지 않았거나 없으면 기존 색점 캐릭터로 조용히 대체된다.
+const PORTRAITS = ["/people/portrait-1.jpeg", "/people/portrait-2.png"];
 const VEIL_TRAVEL = 620; // 이 거리만큼 스크롤하면 장막이 최대치가 된다
 const VEIL_MAX = 0.84;
 // 화면 맨 위에서의 장막 농도는 하늘 밝기를 따라간다.
@@ -14,7 +17,7 @@ const VEIL_MAX = 0.84;
 const VEIL_MIN_BY_PHASE = { night: 0.16, dusk: 0.2, dawn: 0.36, day: 0.48 };
 const TREE_GROW_MS = 900;
 
-export default function VillageBackdrop({ done, total, treeCount, friendActiveToday, otherName }) {
+export default function VillageBackdrop({ done, total, treeCount, friendActiveToday, otherName, me, users = [] }) {
   const canvasRef = useRef(null);
   const dataRef = useRef({});
   const growRef = useRef({ from: treeCount, at: 0 });
@@ -23,7 +26,7 @@ export default function VillageBackdrop({ done, total, treeCount, friendActiveTo
   if (dataRef.current.treeCount !== undefined && dataRef.current.treeCount !== treeCount) {
     growRef.current = { from: dataRef.current.treeCount, at: performance.now() };
   }
-  dataRef.current = { done, total, treeCount, friendActiveToday, otherName };
+  dataRef.current = { done, total, treeCount, friendActiveToday, otherName, me, users };
 
   // 장막 농도 = 시간대별 최소값 → 스크롤할수록 짙어짐.
   //
@@ -66,6 +69,13 @@ export default function VillageBackdrop({ done, total, treeCount, friendActiveTo
     let w = 0;
     let h = 0;
 
+    // 한 번만 로드하고 draw() 클로저에서 계속 재사용 — PhotoDuo와 같은 파일
+    const portraitImgs = PORTRAITS.map((src) => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
+
     const resize = () => {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       w = canvas.clientWidth;
@@ -98,38 +108,80 @@ export default function VillageBackdrop({ done, total, treeCount, friendActiveTo
       ctx.fill();
     };
 
-    const character = (x, y, color, t, i) => {
+    // img가 로드돼 있으면 실제 얼굴 사진을 원형으로 잘라 그린다.
+    // 아직 안 실렸거나 없으면(로딩 중, 파일 없음) 기존 색점 캐릭터로 조용히 대체 —
+    // 화면이 깨지는 대신 항상 뭔가는 서 있다.
+    const character = (x, y, color, t, i, img) => {
       const bob = still ? 0 : Math.sin(t * 2 + i * 1.6) * 1.4;
+      const hasPhoto = !!(img && img.complete && img.naturalWidth > 0);
+      const r = hasPhoto ? 13 : 10;
       ctx.save();
       ctx.translate(x, y + bob);
       ctx.fillStyle = "rgba(0,0,0,.28)";
       ctx.beginPath();
-      ctx.ellipse(0, 4, 9, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 4, hasPhoto ? 11 : 9, 3, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(0, -8, 10, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(255,255,255,.22)";
-      ctx.beginPath();
-      ctx.arc(-4, -11, 3.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#fdf6e8";
-      ctx.beginPath();
-      ctx.arc(-3.6, -9, 1.9, 0, Math.PI * 2);
-      ctx.arc(3.6, -9, 1.9, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#241a14";
-      ctx.beginPath();
-      ctx.arc(-3.6, -9, 0.95, 0, Math.PI * 2);
-      ctx.arc(3.6, -9, 0.95, 0, Math.PI * 2);
-      ctx.fill();
+
+      if (hasPhoto) {
+        // 정사각형으로 크롭 — 증명사진류는 얼굴이 위쪽에 있어서 이미지 중앙이
+        // 아니라 위에서 8% 지점부터 자른다 (정수리가 안 잘리고 얼굴이 원 안에 옴).
+        const iw = img.naturalWidth;
+        const ih = img.naturalHeight;
+        const side = Math.min(iw, ih);
+        const sx = (iw - side) / 2;
+        const sy = Math.min(ih - side, ih * 0.08);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, -8, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, sx, sy, side, side, -r, -8 - r, r * 2, r * 2);
+        ctx.restore();
+        // 누가 누군지 색으로 계속 구분되게 — 기존 빨강/청록 코드를 테두리로 유지
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.arc(0, -8, r, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(0, -8, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,.22)";
+        ctx.beginPath();
+        ctx.arc(-4, -11, 3.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fdf6e8";
+        ctx.beginPath();
+        ctx.arc(-3.6, -9, 1.9, 0, Math.PI * 2);
+        ctx.arc(3.6, -9, 1.9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#241a14";
+        ctx.beginPath();
+        ctx.arc(-3.6, -9, 0.95, 0, Math.PI * 2);
+        ctx.arc(3.6, -9, 0.95, 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.restore();
     };
 
     const draw = (nowMs) => {
       const t = nowMs / 1000;
-      const { done: d, total: tot, treeCount: trees, friendActiveToday: fr, otherName: other } = dataRef.current;
+      const {
+        done: d,
+        total: tot,
+        treeCount: trees,
+        friendActiveToday: fr,
+        otherName: other,
+        me: myName,
+        users: userList = [],
+      } = dataRef.current;
+      // PhotoDuo와 같은 규칙: 먼저 들어온 사람이 portrait-1, 나중 사람이 portrait-2.
+      // 그래서 누가 먼저 접속했든 "나"는 항상 내 사진으로, 상대는 항상 상대 사진으로 뜬다.
+      const myIndex = userList.indexOf(myName);
+      const otherIndex = myIndex === 0 ? 1 : myIndex === 1 ? 0 : -1;
+      const myImg = myIndex >= 0 ? portraitImgs[myIndex] : undefined;
+      const otherImg = otherIndex >= 0 ? portraitImgs[otherIndex] : undefined;
       const ph = skyPhase(); // 매 프레임 — 자정을 넘겨도 하늘이 따라간다
       ctx.clearRect(0, 0, w, h);
 
@@ -279,11 +331,11 @@ export default function VillageBackdrop({ done, total, treeCount, friendActiveTo
       }
 
       // 두 사람 — 친구가 오늘 움직였으면 또렷하게, 조용하면 흐리게
-      character(w * 0.44, groundY + 14, "#d1402c", t, 0);
+      character(w * 0.44, groundY + 14, "#d1402c", t, 0, myImg);
       if (other) {
         ctx.save();
         ctx.globalAlpha = fr ? 1 : 0.4;
-        character(w * 0.56, groundY + 14, "#2f9e8f", t, 1);
+        character(w * 0.56, groundY + 14, "#2f9e8f", t, 1, otherImg);
         ctx.restore();
       }
 

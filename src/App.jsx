@@ -837,6 +837,8 @@ export default function App() {
         treeCount={state.checkins.filter((c) => myGoalIdSet.has(c.goalId)).length}
         friendActiveToday={friendActiveToday}
         otherName={otherName}
+        me={me}
+        users={state.users}
       />
       <div className="shell">
       <div className="masthead">
