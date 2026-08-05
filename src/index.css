@@ -4616,6 +4616,7 @@ button.hud-card {
   border-right: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   background: rgba(29, 36, 71, 0.28);
+  cursor: pointer;
   transition: background 150ms ease;
 }
 
