@@ -22,7 +22,7 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
   const year = base.getFullYear();
   const month = base.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const lead = (new Date(year, month, 1).getDay() + 6) % 7; // 월요일 시작
+  const lead = new Date(year, month, 1).getDay(); // 일요일 시작
   const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
   const today = todayStr(0);
 
@@ -160,7 +160,7 @@ export default function HistoryView({ goals, checkins, progress, excuses, me, ot
       </div>
 
       <div className="history-grid">
-        {DOW.slice(1).concat(DOW[0]).map((d) => (
+        {DOW.map((d) => (
           <span key={d} className="history-dow">
             {d}
           </span>
