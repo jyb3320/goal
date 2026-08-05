@@ -60,6 +60,28 @@ describe("접속 (이름만, 비밀번호 없음)", () => {
   });
 });
 
+describe("공유 캘린더", () => {
+  it("각자 개인 일정을 추가하고 함께 조회한다", () => {
+    const { b } = twoUsers();
+    const added = b.post({ action: "addCalendarEvent", name: "햄", event: { title: "치과", date: "2026-08-12", allDay: false, startTime: "10:30", endTime: "11:00", note: "예약 확인" } });
+    expect(added.status).toBe(200);
+    expect(added.respond.calendarEvents[0]).toMatchObject({ owner: "햄", title: "치과", startTime: "10:30" });
+    const friendView = b.post({ action: "addCalendarEvent", name: "쥐", event: { title: "저녁 약속", date: "2026-08-12", allDay: true } });
+    expect(friendView.respond.calendarEvents).toHaveLength(2);
+  });
+
+  it("본인 일정만 수정하고 삭제할 수 있다", () => {
+    const { b } = twoUsers();
+    const added = b.post({ action: "addCalendarEvent", name: "햄", event: { title: "병원", date: "2026-08-12", allDay: true } });
+    const eventId = added.respond.calendarEvents[0].id;
+    expect(b.post({ action: "updateCalendarEvent", name: "쥐", eventId, event: { title: "변경", date: "2026-08-13", allDay: true } }).status).toBe(403);
+    const updated = b.post({ action: "updateCalendarEvent", name: "햄", eventId, event: { title: "병원 예약", date: "2026-08-13", allDay: true } });
+    expect(updated.respond.calendarEvents[0].title).toBe("병원 예약");
+    expect(b.post({ action: "deleteCalendarEvent", name: "쥐", eventId }).status).toBe(403);
+    expect(b.post({ action: "deleteCalendarEvent", name: "햄", eventId }).respond.calendarEvents).toEqual([]);
+  });
+});
+
 describe("성실 시스템 (최소 버전 · 신호)", () => {
   it("매일 목표에 최소 버전과 신호를 저장한다", () => {
     const b = freshBoard();

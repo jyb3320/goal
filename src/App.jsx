@@ -31,7 +31,7 @@ const EMPTY_STATE = {
   pokes: [], excuses: [], goalMemos: [], bigGoals: [], lifeProfiles: [],
   lifeDomains: [], seasons: [], lifeItems: [], weeklyReviews: [],
   monthlyReviews: [], decisions: [], completedGoals: [], xpEvents: [], xpVersion: 0, archive: {},
-  kpis: [],
+  kpis: [], calendarEvents: [],
 };
 
 function pickState(data) {
@@ -54,6 +54,7 @@ function pickState(data) {
     monthlyReviews: data.monthlyReviews || [],
     decisions: data.decisions || [],
     completedGoals: data.completedGoals || [],
+    calendarEvents: data.calendarEvents || [],
     kpis: data.kpis || [],
     xpEvents: data.xpEvents || [],
     xpVersion: data.xpVersion || 0,
@@ -618,6 +619,13 @@ export default function App() {
     showToast("🔥 응원을 보냈어요.");
   };
 
+  const addCalendarEvent = (event) => mutate({ action: "addCalendarEvent", event });
+  const updateCalendarEvent = (eventId, event) => mutate({ action: "updateCalendarEvent", eventId, event });
+  const deleteCalendarEvent = (eventId) => {
+    if (!window.confirm("이 일정을 삭제할까요?")) return Promise.resolve(false);
+    return mutate({ action: "deleteCalendarEvent", eventId });
+  };
+
   const villageNavigate = (destination, target = "") => {
     if (destination === "reflection") {
       setDesignTab("reflection");
@@ -868,9 +876,9 @@ export default function App() {
         <CalendarView
           state={state}
           me={me}
-          onAdd={() => setAdding(true)}
-          onEdit={setEditingGoal}
-          onCheer={cheerGoal}
+          onAdd={addCalendarEvent}
+          onUpdate={updateCalendarEvent}
+          onDelete={deleteCalendarEvent}
         />
       )}
 

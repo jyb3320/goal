@@ -9,24 +9,21 @@ describe("shared calendar", () => {
     expect(cells[6].date).toBe("2026-08-01");
   });
 
-  it("shows each owner's dated, repeating, deadline and subtask schedule", () => {
-    const goals = [
-      { id: "daily", owner: "햄", title: "운동", kind: "routine", repeatType: "weekdays", repeatDays: [3], startDate: "2026-08-01", status: "active" },
-      { id: "mile", owner: "콩", title: "원고 제출", kind: "milestone", deadline: "2026-08-05", status: "active" },
-      { id: "project", owner: "햄", title: "웹사이트", kind: "project", status: "active", subtasks: [{ id: "task", title: "QA", deadline: "2026-08-05" }] },
-      { id: "once", owner: "콩", title: "서점 방문", kind: "routine", repeatType: "none", startDate: "2026-08-05", status: "active" },
+  it("shows only manually registered events for the selected date", () => {
+    const events = [
+      { id: "all-day", owner: "햄", title: "병원", date: "2026-08-05", allDay: true },
+      { id: "dinner", owner: "쥐", title: "저녁 약속", date: "2026-08-05", allDay: false, startTime: "19:00" },
+      { id: "other", owner: "햄", title: "다른 날", date: "2026-08-06", allDay: true },
     ];
-    const items = calendarItemsForDate(goals, "2026-08-05", [{ goalId: "daily", date: "2026-08-05" }]);
-    expect(items.map((item) => item.title)).toEqual(expect.arrayContaining(["원고 제출", "QA", "운동", "서점 방문"]));
-    expect(items).toHaveLength(4);
-    expect(items.find((item) => item.goalId === "daily")?.done).toBe(true);
-    expect(items.find((item) => item.goalId === "mile")?.deadline).toBe(true);
+    expect(calendarItemsForDate(events, "2026-08-05").map((item) => item.id)).toEqual(["all-day", "dinner"]);
   });
 
-  it("does not show paused routines", () => {
-    const items = calendarItemsForDate([
-      { id: "paused", owner: "햄", title: "잠시 쉼", kind: "routine", repeatType: "daily", status: "paused" },
-    ], "2026-08-05");
-    expect(items).toEqual([]);
+  it("sorts all-day events before timed events and timed events chronologically", () => {
+    const events = [
+      { id: "late", title: "저녁", date: "2026-08-05", allDay: false, startTime: "19:00" },
+      { id: "early", title: "아침", date: "2026-08-05", allDay: false, startTime: "08:00" },
+      { id: "all", title: "종일", date: "2026-08-05", allDay: true },
+    ];
+    expect(calendarItemsForDate(events, "2026-08-05").map((item) => item.id)).toEqual(["all", "early", "late"]);
   });
 });

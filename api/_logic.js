@@ -45,6 +45,7 @@ export function emptyState() {
     decisions: [], // 중요한 결정과 사후 결과
     kpis: [], // 주간 복기에서 기록하는 관찰 지표
     completedGoals: [], // 현황판에서 지워도 기록관에 남기는 완료 기간 목표 스냅샷
+    calendarEvents: [], // 두 사람이 직접 등록해 공유하는 개인 일정
     push: {}, // name -> Web Push 구독 (클라이언트 응답에서는 제거됨)
     archive: {}, // name -> { stamps } 컴팩션된 옛 도장 집계 (XP 유지용)
     xpEvents: [], // 개인·마을 XP 원장. dedupeKey가 논리적 unique 제약 역할을 한다.
@@ -114,7 +115,7 @@ export function normalize(raw) {
   for (const key of [
     "users", "goals", "checkins", "progress", "reactions", "messages", "pokes",
     "excuses", "goalMemos", "bigGoals", "lifeProfiles", "lifeDomains", "seasons",
-    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "kpis", "completedGoals", "xpEvents",
+    "lifeItems", "weeklyReviews", "monthlyReviews", "decisions", "kpis", "completedGoals", "calendarEvents", "xpEvents",
   ]) {
     if (!Array.isArray(s[key])) s[key] = [];
   }
@@ -260,6 +261,11 @@ function cleanDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : "";
 }
 
+function cleanTime(value) {
+  const time = str(value, 5);
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time) ? time : "";
+}
+
 function cleanRepeatDays(value) {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.map((day) => int(day, -1)).filter((day) => day >= 0 && day <= 6))].slice(0, 7);
@@ -382,6 +388,55 @@ export function applyAction(state, body, user) {
   const today = seoulToday();
 
   switch (action) {
+    case "addCalendarEvent": {
+      const title = str(body.event?.title, 120);
+      const date = cleanDate(body.event?.date);
+      if (!title || !date) return { error: "일정 이름과 날짜를 확인해주세요", status: 400 };
+      const allDay = body.event?.allDay !== false;
+      const startTime = allDay ? "" : cleanTime(body.event?.startTime);
+      const endTime = allDay ? "" : cleanTime(body.event?.endTime);
+      if (!allDay && !startTime) return { error: "시작 시간을 선택해주세요", status: 400 };
+      if (startTime && endTime && endTime <= startTime) return { error: "종료 시간은 시작 시간보다 늦어야 해요", status: 400 };
+      state.calendarEvents.push({
+        id: newId("cal"),
+        owner: user,
+        title,
+        date,
+        allDay,
+        startTime,
+        endTime,
+        note: str(body.event?.note, 500),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      return {};
+    }
+
+    case "updateCalendarEvent": {
+      const event = state.calendarEvents.find((item) => item.id === str(body.eventId, 50));
+      if (!event) return { error: "일정을 찾을 수 없어요", status: 404 };
+      if (event.owner !== user) return { error: "본인 일정만 수정할 수 있어요", status: 403 };
+      const title = str(body.event?.title, 120);
+      const date = cleanDate(body.event?.date);
+      if (!title || !date) return { error: "일정 이름과 날짜를 확인해주세요", status: 400 };
+      const allDay = body.event?.allDay !== false;
+      const startTime = allDay ? "" : cleanTime(body.event?.startTime);
+      const endTime = allDay ? "" : cleanTime(body.event?.endTime);
+      if (!allDay && !startTime) return { error: "시작 시간을 선택해주세요", status: 400 };
+      if (startTime && endTime && endTime <= startTime) return { error: "종료 시간은 시작 시간보다 늦어야 해요", status: 400 };
+      Object.assign(event, { title, date, allDay, startTime, endTime, note: str(body.event?.note, 500), updatedAt: new Date().toISOString() });
+      return {};
+    }
+
+    case "deleteCalendarEvent": {
+      const eventId = str(body.eventId, 50);
+      const event = state.calendarEvents.find((item) => item.id === eventId);
+      if (!event) return { noop: true };
+      if (event.owner !== user) return { error: "본인 일정만 삭제할 수 있어요", status: 403 };
+      state.calendarEvents = state.calendarEvents.filter((item) => item.id !== eventId);
+      return {};
+    }
+
     case "setLifeProfile": {
       const fields = cleanTextFields(body.profile, {
         identity: 500,
