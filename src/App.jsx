@@ -361,7 +361,7 @@ export default function App() {
     if ((dow === 5 || dow === 6 || dow === 0) && !wroteThisWeek) {
       return {
         key: `weekly_${thisWeekStart}`,
-        icon: "省",
+        icon: "📝",
         text: "이번 주를 돌아볼 시간이에요. 5분이면 충분해요.",
         cta: "주간 복기 열기",
         tab: "reflection",
@@ -372,7 +372,7 @@ export default function App() {
     if (!myActiveSeason && myGoals.length > 0) {
       return {
         key: "season_setup",
-        icon: "旬",
+        icon: "🧭",
         text: "오늘의 도장이 어디로 향하는지 정해두면 덜 흔들려요.",
         cta: "12주 시즌 정하기",
         tab: "season",
@@ -726,7 +726,7 @@ export default function App() {
             <div className="gate-preview">
               <div className="preview-head">
                 <span>현재 인생 시즌</span>
-                <strong>12週</strong>
+                <strong>12주</strong>
               </div>
               <div className="preview-stamps" aria-hidden="true">
                 {["월", "화", "수", "목", "금", "토", "일"].map((d, i) => (
@@ -868,24 +868,12 @@ export default function App() {
       <PhotoDuo users={state.users} />
 
       <nav className="view-tabs" aria-label="주요 화면">
-        <button type="button" className={view === "board" ? "active" : ""} onClick={() => switchView("board")}>
-          <span>今日</span> 오늘
-        </button>
-        <button type="button" className={view === "week" ? "active" : ""} onClick={() => switchView("week")}>
-          <span>週</span> 이번 주
-        </button>
-        <button type="button" className={view === "calendar" ? "active" : ""} onClick={() => switchView("calendar")}>
-          <span>曆</span> 캘린더
-        </button>
-        <button type="button" className={view === "design" ? "active" : ""} onClick={() => switchView("design")}>
-          <span>設</span> 설계실
-        </button>
-        <button type="button" className={view === "history" ? "active" : ""} onClick={() => switchView("history")}>
-          <span>記</span> 기록
-        </button>
-        <button type="button" className={view === "village" ? "active" : ""} onClick={() => switchView("village")}>
-          <span>村</span> 마을 <span className="tab-level">Lv.{myLevel}</span>
-        </button>
+        <button type="button" className={view === "board" ? "active" : ""} onClick={() => switchView("board")}>오늘</button>
+        <button type="button" className={view === "week" ? "active" : ""} onClick={() => switchView("week")}>이번 주</button>
+        <button type="button" className={view === "calendar" ? "active" : ""} onClick={() => switchView("calendar")}>캘린더</button>
+        <button type="button" className={view === "design" ? "active" : ""} onClick={() => switchView("design")}>설계실</button>
+        <button type="button" className={view === "history" ? "active" : ""} onClick={() => switchView("history")}>기록</button>
+        <button type="button" className={view === "village" ? "active" : ""} onClick={() => switchView("village")}>마을 <span className="tab-level">Lv.{myLevel}</span></button>
       </nav>
 
       {view === "week" && (
@@ -924,15 +912,9 @@ export default function App() {
             <p className="design-sub">12주 계획을 정하고, 주기가 되면 복기하고, 막힐 땐 AI 참모에게 물어보세요.</p>
           </div>
           <div className="design-subnav" role="tablist" aria-label="설계실 메뉴">
-            <button type="button" role="tab" aria-selected={designTab === "season"} className={designTab === "season" ? "active" : ""} onClick={() => setDesignTab("season")}>
-              <span>旬</span> 12주
-            </button>
-            <button type="button" role="tab" aria-selected={designTab === "reflection"} className={designTab === "reflection" ? "active" : ""} onClick={() => setDesignTab("reflection")}>
-              <span>省</span> 복기
-            </button>
-            <button type="button" role="tab" aria-selected={designTab === "advisor"} className={designTab === "advisor" ? "active" : ""} onClick={() => setDesignTab("advisor")}>
-              <span>參</span> AI 참모
-            </button>
+            <button type="button" role="tab" aria-selected={designTab === "season"} className={designTab === "season" ? "active" : ""} onClick={() => setDesignTab("season")}>12주</button>
+            <button type="button" role="tab" aria-selected={designTab === "reflection"} className={designTab === "reflection" ? "active" : ""} onClick={() => setDesignTab("reflection")}>복기</button>
+            <button type="button" role="tab" aria-selected={designTab === "advisor"} className={designTab === "advisor" ? "active" : ""} onClick={() => setDesignTab("advisor")}>AI 참모</button>
           </div>
 
           {designTab === "season" && (
