@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { todayStr, weekDates } from "../lib/dates.js";
 import { formatDeadline, goalKind, repeatLabel, repeatTypeOf, weekProgress } from "../lib/goals.js";
+import { fiveDayReviewPeriod } from "../lib/reviewPeriods.js";
 
 const PORTRAITS = ["/people/portrait-1.jpeg", "/people/portrait-2.png"];
 
@@ -136,7 +137,9 @@ export default function WeekView({
   const projects = goals.filter((goal) => goalKind(goal) === "project" && goal.status !== "completed");
   const overdue = goals.filter((goal) => goal.deadline && goal.deadline < todayStr(0) && goal.status !== "completed");
   const kpis = state.kpis.filter((kpi) => kpi.owner === selectedOwner && (!selectedSeason || !kpi.seasonId || kpi.seasonId === selectedSeason.id));
-  const weeklyReview = state.weeklyReviews.find((review) => review.owner === selectedOwner && review.weekStart === weekStart);
+  const reviewPeriod = fiveDayReviewPeriod(todayStr(0));
+  const weeklyReview = state.weeklyReviews.find((review) => review.owner === selectedOwner && review.weekStart === reviewPeriod.start)
+    || state.weeklyReviews.find((review) => review.owner === selectedOwner && review.weekStart === weekStart);
   const seasonProgress = useMemo(() => {
     const linked = goals.filter((goal) => selectedSeason && goal.seasonId === selectedSeason.id && goal.kind === "milestone");
     return linked.map((goal) => ({ goal, current: progressSum[goal.id] || 0 }));

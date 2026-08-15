@@ -27,6 +27,7 @@ import ProjectGoalCard from "./components/ProjectGoalCard.jsx";
 import PhotoDuo from "./components/PhotoDuo.jsx";
 import { goalKind, isGoalDueOn } from "./lib/goals.js";
 import { reducedMotion } from "./lib/fx.js";
+import { fiveDayReviewPeriod } from "./lib/reviewPeriods.js";
 import { XP_EVENT_LABELS } from "../shared/xp-config.js";
 
 // 서버(api/_logic.js)의 EXCUSE_BACKFILL_DAYS와 같은 값이어야 한다.
@@ -352,19 +353,21 @@ export default function App() {
   // 탭을 찾아가는 대신, 복기·시즌 같은 저빈도 작업이 때가 되면 먼저 말을 건다.
   const cadencePrompt = useMemo(() => {
     if (!loaded) return null;
-    const dow = new Date(clock).getDay(); // 0=일, 5=금, 6=토
-    const thisWeekStart = weekDates(0)[0];
+    const today = todayStr(0);
+    const reviewPeriod = fiveDayReviewPeriod(today);
+    const periodStart = reviewPeriod.start;
 
-    // 1) 주말이 되면 이번 주 복기 유도 (아직 이번 주 복기를 안 썼을 때만)
-    const wroteThisWeek = state.weeklyReviews.some(
-      (r) => r.owner === me && r.weekStart === thisWeekStart
+    // 1) 5일 기간의 마지막 날부터 다음 기간이 시작되기 전까지 복기 유도
+    const wroteThisPeriod = state.weeklyReviews.some(
+      (r) => r.owner === me && r.weekStart === periodStart
+        && (r.periodDays === 5 || r.cadence === "five-day")
     );
-    if ((dow === 5 || dow === 6 || dow === 0) && !wroteThisWeek) {
+    if (!reviewPeriod.beforeAnchor && today >= reviewPeriod.end && !wroteThisPeriod) {
       return {
-        key: `weekly_${thisWeekStart}`,
+        key: `review5_${periodStart}`,
         icon: "📝",
-        text: "이번 주를 돌아볼 시간이에요. 5분이면 충분해요.",
-        cta: "주간 복기 열기",
+        text: "이번 5일을 돌아볼 시간이에요. 5분이면 충분해요.",
+        cta: "5일 복기 열기",
         tab: "reflection",
       };
     }
@@ -595,7 +598,12 @@ export default function App() {
 
   const saveWeeklyReview = async (review) => {
     const ok = await mutate({ action: "setWeeklyReview", review });
-    if (ok) showToast(review.createPromises ? "복기와 다음 주 약속을 저장했습니다." : "이번 주 복기를 저장했습니다.");
+    if (ok) {
+      const fiveDay = review.cadence === "five-day" || Number(review.periodDays) === 5;
+      showToast(review.createPromises
+        ? `복기와 ${fiveDay ? "다음 5일" : "다음 주"} 약속을 저장했습니다.`
+        : `${fiveDay ? "이번 5일" : "이번 주"} 복기를 저장했습니다.`);
+    }
     return ok;
   };
 

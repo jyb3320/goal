@@ -6,6 +6,7 @@ import {
   getAppWeekKey,
   XP_REWARDS,
 } from "./_xp.js";
+import { fiveDayReviewPeriod, FIVE_DAY_REVIEW_LENGTH } from "../src/lib/reviewPeriods.js";
 
 export const KEY = "goaltracker:state";
 export const MAX_USERS = 2;
@@ -739,8 +740,11 @@ export function applyAction(state, body, user) {
     }
 
     case "setWeeklyReview": {
-      const weekStart = str(body.review?.weekStart, 10);
-      if (!weekStart) return { error: "주간 기준일이 필요해요", status: 400 };
+      const requestedStart = str(body.review?.weekStart, 10);
+      if (!requestedStart) return { error: "회고 기준일이 필요해요", status: 400 };
+      const requestedFiveDay = body.review?.cadence === "five-day" || Number(body.review?.periodDays) === FIVE_DAY_REVIEW_LENGTH;
+      const requestedPeriod = requestedFiveDay ? fiveDayReviewPeriod(requestedStart) : null;
+      const weekStart = requestedPeriod?.start || requestedStart;
       const fields = cleanTextFields(body.review, {
         facts: 800,
         wins: 600,
@@ -761,11 +765,17 @@ export function applyAction(state, body, user) {
       });
       if (!Object.values(fields).some(Boolean)) return { error: "복기 내용을 적어주세요", status: 400 };
       const existing = state.weeklyReviews.find((r) => r.owner === user && r.weekStart === weekStart);
-      const record = { id: existing?.id || newId("week"), owner: user, weekStart, ...fields, updatedAt: new Date().toISOString() };
+      const periodDays = requestedFiveDay || existing?.periodDays === FIVE_DAY_REVIEW_LENGTH ? FIVE_DAY_REVIEW_LENGTH : 7;
+      const cadence = periodDays === FIVE_DAY_REVIEW_LENGTH ? "five-day" : existing?.cadence || "weekly";
+      const record = {
+        id: existing?.id || newId("week"), owner: user, weekStart, ...fields,
+        ...(periodDays === FIVE_DAY_REVIEW_LENGTH ? { cadence, periodDays } : existing?.periodDays ? { cadence, periodDays } : {}),
+        updatedAt: new Date().toISOString(),
+      };
       if (existing) Object.assign(existing, record);
       else state.weeklyReviews.push(record);
       if (body.review?.createPromises === true) {
-        const nextWeekStart = shiftDate(weekStart, 7);
+        const nextWeekStart = shiftDate(weekStart, periodDays);
         const promises = Array.isArray(body.review.promiseItems)
           ? body.review.promiseItems.map((item) => str(item, 120)).filter(Boolean).slice(0, 3)
           : fields.promises.split("\n").map((item) => item.replace(/^\s*[-•\d.)]+\s*/, "").trim()).filter(Boolean).slice(0, 3);
@@ -780,14 +790,15 @@ export function applyAction(state, body, user) {
         }
       }
       if (existing) return {};
+      const periodKey = periodDays === FIVE_DAY_REVIEW_LENGTH ? `5d:${weekStart}` : getAppWeekKey(weekStart);
       const award = awardPersonalXp(state, {
         recipientId: user,
         eventType: "WEEKLY_REVIEW_COMPLETED",
         sourceType: "WEEKLY_REVIEW",
         sourceId: record.id,
-        weekKey: getAppWeekKey(weekStart),
+        weekKey: periodKey,
         amount: XP_REWARDS.WEEKLY_REVIEW_COMPLETED,
-        dedupeKey: `weekly-review:${user}:${getAppWeekKey(weekStart)}`,
+        dedupeKey: `weekly-review:${user}:${periodKey}`,
       });
       return { xpAwards: [award] };
     }

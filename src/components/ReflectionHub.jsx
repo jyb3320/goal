@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { currentMonth } from "../lib/life.js";
-import { weekDates, weekDatesOf } from "../lib/dates.js";
-import { pastWeeklyReviews } from "../lib/reviews.js";
+import { todayStr } from "../lib/dates.js";
+import { fiveDayReviewPeriod, pastReviewPeriods, reviewPeriodOf } from "../lib/reviews.js";
+import { isGoalDueOn } from "../lib/goals.js";
 
 const WEEK_FIELDS = [
-  ["summary", "1. 이번 주 요약", "이번 주에 있었던 중요한 일과 흐름을 간단히 적기"],
-  ["wins", "2. 잘한 선택", "이번 주에 내린 선택 중 잘했다고 생각하는 것"],
+  ["summary", "1. 이번 5일 요약", "이번 5일에 있었던 중요한 일과 흐름을 간단히 적기"],
+  ["wins", "2. 잘한 선택", "이번 5일에 내린 선택 중 잘했다고 생각하는 것"],
   ["winsReasonPlan", "그렇게 생각한 이유, 앞으로 어떻게 지속해 나갈 것인지", "그 선택이 좋았던 이유와 계속 이어갈 방법", "followup"],
   ["avoidance", "3. 피하거나 미룬 일", "알면서도 피했거나 뒤로 미룬 일"],
   ["avoidanceReason", "회피한 이유", "그 일을 피하게 된 상황이나 마음", "followup"],
-  ["timeMoney", "4. 시간과 돈의 사용", "이번 주 시간과 돈을 어디에 썼는지 돌아보기"],
+  ["timeMoney", "4. 시간과 돈의 사용", "이번 5일 동안 시간과 돈을 어디에 썼는지 돌아보기"],
   ["worry", "5. 지금 가장 신경 쓰이는 일", "지금 머릿속을 가장 많이 차지하는 일"],
-  ["keep", "6. 다음 주에도 유지할 것은?", "효과가 있었고 계속 이어가고 싶은 것"],
+  ["keep", "6. 다음 5일에도 유지할 것은?", "효과가 있었고 다음 5일에도 이어가고 싶은 것"],
   ["reduce", "7. 중단하거나 줄일 것은?", "덜어내거나 멈추고 싶은 일"],
-  ["promises", "8. 다음 주 약속 세 가지", "한 줄에 하나씩, 구체적이고 확인 가능한 약속"],
-  ["priority", "다음 주 우선순위", "세 가지 약속 중 가장 먼저 지킬 것", "followup"],
+  ["promises", "8. 다음 5일 약속 세 가지", "한 줄에 하나씩, 구체적이고 확인 가능한 약속"],
+  ["priority", "다음 5일 우선순위", "세 가지 약속 중 가장 먼저 지킬 것", "followup"],
 ];
 
 const LEGACY_WEEK_FIELDS = [
@@ -50,7 +51,7 @@ function ReviewForm({ fields, initial, periodKey, onSave, submitLabel }) {
   return (
     <form className="review-form" onSubmit={submit}>
       {fields.map(([key, label, placeholder, kind]) => <label key={key} className={kind === "followup" ? "review-followup" : ""}><span>{kind === "followup" && <i aria-hidden="true">↳</i>}{label}</span><textarea value={draft[key] || ""} onChange={(e) => setDraft({ ...draft, [key]: e.target.value })} placeholder={placeholder} rows={3} /></label>)}
-      {"weekStart" in periodKey && <label className="sheet-check"><input type="checkbox" checked={createPromises} onChange={(e) => setCreatePromises(e.target.checked)} /><span>다음 주 약속 세 가지를 다음 주 목표로 자동 생성</span></label>}
+      {"weekStart" in periodKey && <label className="sheet-check"><input type="checkbox" checked={createPromises} onChange={(e) => setCreatePromises(e.target.checked)} /><span>다음 5일 약속 세 가지를 다음 회의 목표로 자동 생성</span></label>}
       <button className="btn-primary life-save" type="submit" disabled={saving}>{saving ? "기록 중…" : submitLabel}</button>
     </form>
   );
@@ -61,34 +62,35 @@ function ReviewRead({ review, fields, empty }) {
   return <div className="review-read">{fields.filter(([key]) => review[key]).map(([key, label, , kind]) => <article key={key} className={kind === "followup" ? "review-followup" : ""}><span>{kind === "followup" && <i aria-hidden="true">↳</i>}{label}</span><p>{review[key]}</p></article>)}</div>;
 }
 
-function WeeklyReviewArchive({ reviews, me, otherName, currentWeekStart }) {
+function WeeklyReviewArchive({ reviews, me, otherName, currentPeriodStart }) {
   const [owner, setOwner] = useState(me);
   useEffect(() => setOwner(me), [me]);
   const history = useMemo(
-    () => pastWeeklyReviews(reviews, owner, currentWeekStart),
-    [reviews, owner, currentWeekStart]
+    () => pastReviewPeriods(reviews, owner, currentPeriodStart),
+    [reviews, owner, currentPeriodStart]
   );
 
   return (
     <section className="life-paper weekly-review-archive">
       <div className="life-section-head">
-        <div><span>冊</span><h3>지난 주간 복기</h3></div>
-        <p>지나간 주의 선택과 배움을 다시 펼쳐봅니다.</p>
+        <div><span>冊</span><h3>지난 5일 복기</h3></div>
+        <p>지나간 5일의 선택과 배움을 다시 펼쳐봅니다.</p>
       </div>
       <div className="weekly-review-owner" aria-label="복기 작성자 선택">
         <button type="button" className={owner === me ? "selected" : ""} onClick={() => setOwner(me)}>내 기록</button>
         {otherName && <button type="button" className={owner === otherName ? "selected" : ""} onClick={() => setOwner(otherName)}>{otherName} 기록</button>}
       </div>
       {history.length === 0 ? (
-        <div className="life-empty">아직 지나간 주간 복기가 없어요.</div>
+        <div className="life-empty">아직 지나간 5일 복기가 없어요.</div>
       ) : (
         <div className="weekly-review-list">
           {history.map((review, index) => {
-            const weekEnd = weekDatesOf(review.weekStart)[6];
+            const period = reviewPeriodOf(review);
+            const periodLabel = review.periodDays === 5 || review.cadence === "five-day" ? "5일" : "주간";
             return (
               <details key={review.id || `${review.owner}-${review.weekStart}`} open={index === 0}>
                 <summary>
-                  <span>{review.weekStart.slice(5).replace("-", ".")} — {weekEnd.slice(5).replace("-", ".")}</span>
+                  <span>{period.start.slice(5).replace("-", ".")} — {period.end.slice(5).replace("-", ".")} · {periodLabel}</span>
                   <strong>{review.summary || review.did || review.wins || review.facts || "기록한 복기 열기"}</strong>
                   <i aria-hidden="true">⌄</i>
                 </summary>
@@ -156,38 +158,43 @@ function DecisionCard({ decision, mine, onUpdate, onDelete }) {
 
 export default function ReflectionHub({ state, me, otherName, onSaveWeekly, onSaveMonthly, onAddDecision, onUpdateDecision, onDeleteDecision }) {
   const [section, setSection] = useState("weekly");
-  const weekStart = weekDates(0)[0];
+  const reviewPeriod = fiveDayReviewPeriod(todayStr(0));
+  const periodStart = reviewPeriod.start;
+  const periodEnd = reviewPeriod.end;
   const month = currentMonth();
-  const myWeekly = state.weeklyReviews.find((review) => review.owner === me && review.weekStart === weekStart);
-  const friendWeekly = otherName ? [...state.weeklyReviews].reverse().find((review) => review.owner === otherName) : null;
+  const myWeekly = state.weeklyReviews.find((review) => review.owner === me && review.weekStart === periodStart);
+  const friendWeekly = otherName
+    ? state.weeklyReviews.find((review) => review.owner === otherName && review.weekStart === periodStart)
+    : null;
   const myMonthly = state.monthlyReviews.find((review) => review.owner === me && review.month === month);
   const friendMonthly = otherName ? [...state.monthlyReviews].reverse().find((review) => review.owner === otherName) : null;
   const support = useMemo(() => state.lifeProfiles.filter((profile) => profile.supportNeeded), [state.lifeProfiles]);
   const weekStats = useMemo(() => {
-    const days = weekDates(0);
+    const days = reviewPeriod.days;
     const myGoals = state.goals.filter((goal) => {
       if (goal.owner !== me || goal.status === "failed") return false;
-      if (goal.startDate && goal.startDate > days[6]) return false;
+      if (goal.startDate && goal.startDate > days.at(-1)) return false;
       if (goal.deadline && goal.deadline < days[0]) return false;
       if (goal.scheduledWeek && goal.scheduledWeek !== days[0]) return false;
       if (goal.scheduledDate && !days.includes(goal.scheduledDate) && goal.repeatType === "none") return false;
       return true;
     });
     const planned = myGoals.filter((goal) => goal.type !== "milestone").reduce((sum, goal) => {
-      if (goal.repeatType === "weekdays") return sum + (goal.repeatDays || []).filter((day) => days.some((date) => new Date(`${date}T00:00:00`).getDay() === Number(day))).length;
-      if (goal.repeatType === "weekly") return sum + Math.max(1, goal.repeatCount || 1);
-      return sum + 1;
+      const repeat = goal.repeatType || "daily";
+      if (repeat === "weekly" || repeat === "monthly") return sum + Math.max(1, goal.repeatCount || 1);
+      if (repeat === "none") return sum + (days.some((date) => isGoalDueOn(goal, date)) ? 1 : 0);
+      return sum + days.filter((date) => isGoalDueOn(goal, date)).length;
     }, 0);
     const ids = new Set(myGoals.map((goal) => goal.id));
     const completed = state.checkins.filter((item) => ids.has(item.goalId) && days.includes(item.date)).length;
     const minimum = state.checkins.filter((item) => ids.has(item.goalId) && days.includes(item.date) && item.min).length;
-    const unfinished = myGoals.filter((goal) => goal.deadline && goal.deadline <= days[6] && goal.status !== "completed").length;
+    const unfinished = myGoals.filter((goal) => goal.deadline && goal.deadline <= days.at(-1) && goal.status !== "completed").length;
     return { planned, completed, minimum, unfinished, rate: planned ? Math.round((completed / planned) * 100) : 0 };
-  }, [state.goals, state.checkins, me]);
+  }, [state.goals, state.checkins, me, reviewPeriod.start]);
 
   return (
     <div className="life-surface">
-      <header className="life-hero reflection-hero"><div><p className="life-kicker">성과보다 정직함을 남깁니다</p><h2>인생 회의와 복기</h2><p>현실을 함께 보고, 다음 선택을 더 나아지게 만드는 기록.</p></div><div className="life-hero-mark">省</div></header>
+      <header className="life-hero reflection-hero"><div><p className="life-kicker">성과보다 정직함을 남깁니다</p><h2>인생 회의와 복기</h2><p>5일마다 현실을 함께 보고, 다음 선택을 더 나아지게 만드는 기록.</p></div><div className="life-hero-mark">省</div></header>
       <div className="reflection-tabs">
         <button type="button" className={section === "weekly" ? "selected" : ""} onClick={() => setSection("weekly")}>주간 인생 회의</button>
         <button type="button" className={section === "monthly" ? "selected" : ""} onClick={() => setSection("monthly")}>월간 방향 복기</button>
@@ -201,10 +208,10 @@ export default function ReflectionHub({ state, me, otherName, onSaveWeekly, onSa
           {support.length > 0 && <div className="support-notes">{support.map((item) => <p key={item.owner}><b>{item.owner}에게 필요한 도움</b>{item.supportNeeded}</p>)}</div>}
         </section>
         <div className="review-columns">
-          <section className="life-paper"><div className="life-section-head"><div><span>週</span><h3>{me}의 이번 주</h3></div><p>{weekStart} 시작</p></div><div className="review-auto-summary"><div><span>계획 행동</span><strong>{weekStats.planned}</strong></div><div><span>완료 행동</span><strong>{weekStats.completed}</strong></div><div><span>준수율</span><strong>{weekStats.rate}%</strong></div><div><span>최소치 사용</span><strong>{weekStats.minimum}</strong></div><div><span>미완료</span><strong>{weekStats.unfinished}</strong></div></div><ReviewForm fields={WEEK_FIELDS} initial={myWeekly} periodKey={{ weekStart }} onSave={onSaveWeekly} submitLabel="이번 주 복기 저장" /></section>
-          <section className="life-paper friend-review"><div className="life-section-head"><div><span>友</span><h3>{otherName || "친구"}의 최근 기록</h3></div></div><ReviewRead review={friendWeekly} fields={WEEK_FIELDS} empty={otherName ? "친구의 주간 기록을 기다리고 있어요." : "친구가 들어오면 기록이 보여요."} /></section>
+          <section className="life-paper"><div className="life-section-head"><div><span>5日</span><h3>{me}의 이번 5일</h3></div><p>{reviewPeriod.beforeAnchor ? "첫 회의 준비" : "이번 회의"} · {periodStart} — {periodEnd} · 5일 주기</p></div><div className="review-auto-summary"><div><span>계획 행동</span><strong>{weekStats.planned}</strong></div><div><span>완료 행동</span><strong>{weekStats.completed}</strong></div><div><span>준수율</span><strong>{weekStats.rate}%</strong></div><div><span>최소치 사용</span><strong>{weekStats.minimum}</strong></div><div><span>미완료</span><strong>{weekStats.unfinished}</strong></div></div><ReviewForm fields={WEEK_FIELDS} initial={myWeekly} periodKey={{ weekStart: periodStart, cadence: "five-day", periodDays: 5 }} onSave={onSaveWeekly} submitLabel="이번 5일 복기 저장" /></section>
+          <section className="life-paper friend-review"><div className="life-section-head"><div><span>友</span><h3>{otherName || "친구"}의 이번 5일</h3></div></div><ReviewRead review={friendWeekly} fields={WEEK_FIELDS} empty={otherName ? "친구의 이번 5일 기록을 기다리고 있어요." : "친구가 들어오면 기록이 보여요."} /></section>
         </div>
-        <WeeklyReviewArchive reviews={state.weeklyReviews} me={me} otherName={otherName} currentWeekStart={weekStart} />
+        <WeeklyReviewArchive reviews={state.weeklyReviews} me={me} otherName={otherName} currentPeriodStart={periodStart} />
       </>}
 
       {section === "monthly" && <div className="review-columns">

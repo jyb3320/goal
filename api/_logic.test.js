@@ -662,6 +662,36 @@ describe("인생 운영 시스템", () => {
     expect(monthly.respond.monthlyReviews).toHaveLength(1);
   });
 
+  it("2026-08-17부터 5일 회고를 저장하고 다음 기간 약속을 만든다", () => {
+    const b = lifeBoard();
+    const first = b.post({
+      action: "setWeeklyReview",
+      name: "햄",
+      review: {
+        weekStart: "2026-08-17",
+        cadence: "five-day",
+        periodDays: 5,
+        wins: "아침 실행",
+        promises: "운동\n정리\n독서",
+        createPromises: true,
+      },
+    });
+    expect(first.respond.weeklyReviews[0]).toMatchObject({ weekStart: "2026-08-17", cadence: "five-day", periodDays: 5 });
+    expect(first.respond.goals.filter((goal) => goal.scheduledWeek === "2026-08-22")).toHaveLength(3);
+
+    const updated = b.post({
+      action: "setWeeklyReview",
+      name: "햄",
+      review: { weekStart: "2026-08-17", cadence: "five-day", periodDays: 5, wins: "아침 실행을 이어감" },
+    });
+    expect(updated.respond.weeklyReviews).toHaveLength(1);
+    expect(updated.respond.weeklyReviews[0].wins).toBe("아침 실행을 이어감");
+    expect(updated.respond.xpEvents.filter((event) => event.eventType === "WEEKLY_REVIEW_COMPLETED")).toHaveLength(1);
+
+    const next = b.post({ action: "setWeeklyReview", name: "햄", review: { weekStart: "2026-08-22", cadence: "five-day", periodDays: 5, wins: "다음 기간도 기록" } });
+    expect(next.respond.xpEvents.filter((event) => event.eventType === "WEEKLY_REVIEW_COMPLETED")).toHaveLength(2);
+  });
+
   it("결정 기록의 결과는 작성자만 수정할 수 있다", () => {
     const b = lifeBoard();
     const added = b.post({
