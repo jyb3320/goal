@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   computeXP,
   xpForLevel,
@@ -11,6 +11,9 @@ import { VILLAGE_ID } from "../shared/xp-config.js";
 import { buildVillageStatus } from "./lib/village.js";
 import { skyPhase } from "./lib/sky.js";
 import VillagePanel from "./components/VillagePanel.jsx";
+
+// three.js는 마을 탭을 열 때만 내려받는다 — 매일 쓰는 다른 탭의 번들을 늘리지 않는다
+const Village3D = lazy(() => import("./components/Village3D.jsx"));
 
 // ---------- 월드 상수 ----------
 const WORLD_W = 1400;
@@ -110,6 +113,10 @@ export default function Village({
   const [xpOpen, setXpOpen] = useState(false);
   const [xpTab, setXpTab] = useState("personal");
   const villageStatus = useMemo(() => buildVillageStatus(state, me, otherName), [state, me, otherName]);
+  const treeCount = useMemo(() => {
+    const ids = new Set(villageStatus.mine.goals.map((goal) => goal.id));
+    return state.checkins.filter((item) => ids.has(item.goalId)).length;
+  }, [state.checkins, villageStatus]);
   const readKey = `goal-village-mail-read:${me}`;
   const [readEventKeys, setReadEventKeys] = useState(() => {
     try {
@@ -1123,6 +1130,10 @@ export default function Village({
   }, []);
 
   return (
+    <>
+    <Suspense fallback={<div className="village3d village3d-loading" />}>
+      <Village3D me={me} otherName={otherName} status={villageStatus} treeCount={treeCount} />
+    </Suspense>
     <div className="village-wrap">
       <canvas ref={canvasRef} className="village-canvas" />
       <div className="village-hud">
@@ -1212,5 +1223,6 @@ export default function Village({
         onDeleteMemo={onDeleteMemo}
       />
     </div>
+    </>
   );
 }

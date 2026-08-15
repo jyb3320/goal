@@ -7539,3 +7539,86 @@ select:focus {
     display: none;
   }
 }
+
+/* ---------- 오늘의 마을 (3D 디오라마) ---------- */
+/* 마을 탭에서만 보인다. 장식이 아니라 상태판이라 캡션이 숫자를 같이 읽어준다. */
+.village3d {
+  position: relative;
+  border: 1px solid rgba(185, 163, 110, 0.72);
+  border-radius: var(--radius);
+  overflow: hidden;
+  height: min(44vh, 340px);
+  margin-bottom: 12px;
+  background: var(--paper-deep);
+  box-shadow: var(--shadow);
+}
+
+.village3d-loading {
+  background: linear-gradient(180deg, #1d2547, #2a3358);
+}
+
+.village3d-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.village3d-cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #f4ecd8;
+  background: linear-gradient(180deg, rgba(12, 15, 32, 0) 0%, rgba(12, 15, 32, 0.72) 60%);
+  pointer-events: none;
+}
+
+.village3d-phase {
+  font-weight: 700;
+  color: #e0ab4c;
+  white-space: nowrap;
+}
+
+.village3d-line {
+  flex: 1;
+  opacity: 0.9;
+}
+
+.village3d-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .village3d {
+    height: min(38vh, 260px);
+  }
+  .village3d-cap {
+    font-size: 0.76rem;
+  }
+}
+
+/* ---------- 배경 영상 ---------- */
+/* .village-backdrop 껍데기를 그대로 쓰므로 장막(.village-backdrop-veil)이 위에 덮인다. */
+.village-backdrop-video,
+.village-backdrop-still {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  /* 얼굴이 본문과 싸우지 않게 눕힌다. 세게 걸면 영상이 안 보이니 최소한만.
+     더 잘 읽히게 하려면 blur를 올리거나 VideoBackdrop의 VEIL_MIN을 올리면 된다. */
+  filter: saturate(0.8) contrast(0.9) blur(2px);
+  /* blur가 가장자리를 비추지 않도록 살짝 키운다 */
+  transform: scale(1.03);
+}

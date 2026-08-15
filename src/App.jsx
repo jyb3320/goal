@@ -15,6 +15,7 @@ import GoalMemoPanel from "./components/GoalMemoPanel.jsx";
 import MissedPanel from "./components/MissedPanel.jsx";
 import VillageHero from "./components/VillageHero.jsx";
 import VillageBackdrop from "./components/VillageBackdrop.jsx";
+import VideoBackdrop from "./components/VideoBackdrop.jsx";
 import Toast from "./components/Toast.jsx";
 import BigGoalPanel from "./components/BigGoalPanel.jsx";
 import SeasonBoard from "./components/SeasonBoard.jsx";
@@ -831,7 +832,9 @@ export default function App() {
   return (
     <>
       {/* 모든 탭이 같은 세계 위에 뜬다 — 탭을 바꿔도 마을은 이어진다 */}
-      <VillageBackdrop
+      {/* 배경 영상. 캔버스 마을 배경으로 되돌리려면 VideoBackdrop을 지우고 아래 주석을 살리면 된다. */}
+      <VideoBackdrop />
+      {/* <VillageBackdrop
         done={todayDone}
         total={todayStampGoals.length}
         treeCount={state.checkins.filter((c) => myGoalIdSet.has(c.goalId)).length}
@@ -839,7 +842,7 @@ export default function App() {
         otherName={otherName}
         me={me}
         users={state.users}
-      />
+      /> */}
       <div className="shell">
       <div className="masthead">
         <h1>
