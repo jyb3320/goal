@@ -124,14 +124,28 @@ describe("성실 시스템 (최소 버전 · 신호)", () => {
     const checkin = r.respond.checkins.find((c) => c.goalId === goal.id && c.date === today);
     expect(checkin).toBeTruthy();
     expect(checkin.min).toBe(true);
+    expect(checkin.completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
   });
 
-  it("일반 도장에는 min 플래그가 없다", () => {
+  it("일반 도장은 서버 completedAt을 기록하고 다시 누르면 삭제된다", () => {
     const { b, goal } = twoUsers();
     const today = seoulToday();
-    const r = b.post({ action: "toggleCheckin", name: "햄", goalId: goal.id, date: today });
+    const clientTime = "2000-01-01T00:00:00.000Z";
+    const r = b.post({ action: "toggleCheckin", name: "햄", goalId: goal.id, date: today, completedAt: clientTime });
     const checkin = r.respond.checkins.find((c) => c.goalId === goal.id && c.date === today);
     expect(checkin.min).toBeUndefined();
+    expect(checkin.completedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+    expect(checkin.completedAt).not.toBe(clientTime);
+
+    const removed = b.post({ action: "toggleCheckin", name: "햄", goalId: goal.id, date: today });
+    expect(removed.respond.checkins.some((c) => c.goalId === goal.id && c.date === today)).toBe(false);
+  });
+
+  it("completedAt 없는 기존 도장도 normalize에서 그대로 유지된다", () => {
+    const legacy = { goalId: "legacy-goal", date: "2026-08-31", min: true };
+    const state = normalize({ checkins: [legacy], xpVersion: 1 });
+    expect(state.checkins).toEqual([legacy]);
+    expect(state.checkins[0].completedAt).toBeUndefined();
   });
 });
 
@@ -183,11 +197,15 @@ describe("소유권과 날짜 검증", () => {
       action: "toggleCheckin", name: "햄", goalId: goal.id, date: shiftDate(seoulToday(), -5),
     });
     expect(old.status).toBe(400);
+    const yesterday = b.post({
+      action: "toggleCheckin", name: "햄", goalId: goal.id, date: shiftDate(seoulToday(), -1),
+    });
+    expect(yesterday.status).toBe(200);
     const ok = b.post({
       action: "toggleCheckin", name: "햄", goalId: goal.id, date: seoulToday(),
     });
     expect(ok.status).toBe(200);
-    expect(ok.respond.checkins).toHaveLength(1);
+    expect(ok.respond.checkins).toHaveLength(2);
   });
 
   it("남의 목표 삭제 불가", () => {

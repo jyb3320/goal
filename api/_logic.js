@@ -1107,7 +1107,7 @@ export function applyAction(state, body, user) {
         );
       } else {
         // min:true = 바쁜 날 최소 버전만 수행. 연속은 살지만 정직하게 따로 표시한다.
-        const checkin = { goalId: goal.id, date };
+        const checkin = { goalId: goal.id, date, completedAt: new Date().toISOString() };
         if (body.min === true) checkin.min = true;
         state.checkins.push(checkin);
         const personal = awardPersonalXp(state, {
