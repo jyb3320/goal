@@ -25,6 +25,7 @@ import WeekView from "./components/WeekView.jsx";
 import CalendarView from "./components/CalendarView.jsx";
 import ProjectGoalCard from "./components/ProjectGoalCard.jsx";
 import PhotoDuo from "./components/PhotoDuo.jsx";
+import TodayCommitments from "./components/TodayCommitments.jsx";
 import { goalKind, isGoalDueOn } from "./lib/goals.js";
 import { reducedMotion } from "./lib/fx.js";
 import { fiveDayReviewPeriod } from "./lib/reviewPeriods.js";
@@ -1068,6 +1069,15 @@ export default function App() {
           )}
 
           {otherName && <WeekSummary summary={weeklySummary} />}
+
+          {loaded && (
+            <TodayCommitments
+              goals={state.goals}
+              checkins={state.checkins}
+              me={me}
+              today={today}
+            />
+          )}
 
           <div className="columns">
             <section className="goal-column" id="my-goals">

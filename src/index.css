@@ -7540,6 +7540,174 @@ select:focus {
   }
 }
 
+/* ---------- 오늘의 실행 약속 ---------- */
+.today-commitments {
+  margin: 0 0 18px;
+  padding: 18px;
+  border: 1px solid rgba(242, 234, 214, 0.13);
+  border-radius: var(--r-md);
+  background: rgba(29, 36, 71, 0.88);
+}
+
+.today-commitments-head,
+.today-commitments-title,
+.today-commitment {
+  display: flex;
+  align-items: center;
+}
+
+.today-commitments-head {
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.today-commitments-title {
+  gap: 11px;
+  min-width: 0;
+}
+
+.today-commitments-title > span {
+  display: grid;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(232, 183, 92, 0.34);
+  border-radius: 50%;
+  color: var(--gold-lit);
+  font-family: var(--font-display);
+  font-size: 17px;
+}
+
+.today-commitments-title h2 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.035em;
+}
+
+.today-commitments-title p {
+  margin: 3px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.today-commitments-head > strong {
+  flex: 0 0 auto;
+  color: var(--gold-lit);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-commitment-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.today-commitment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-left: 3px solid rgba(232, 183, 92, 0.62);
+  border-radius: var(--r-md);
+  background: var(--paper-card);
+}
+
+.today-commitment.completed {
+  border-left-color: var(--teal);
+}
+
+.today-commitment time {
+  min-width: 48px;
+  color: var(--gold-lit);
+  font-size: 13px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.today-commitment-body {
+  min-width: 0;
+}
+
+.today-commitment-body > strong {
+  display: block;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-commitment-cue {
+  display: flex;
+  gap: 6px;
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.today-commitment-cue b {
+  flex: 0 0 auto;
+  color: var(--teal);
+  font-weight: 700;
+}
+
+.today-commitment-status {
+  align-self: center;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  font-size: 9px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.today-commitment-status.waiting {
+  color: var(--ink-soft);
+}
+
+.today-commitment-status.done {
+  border-color: rgba(69, 189, 168, 0.3);
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.today-commitment-status.minimum {
+  border-color: rgba(232, 183, 92, 0.3);
+  background: rgba(232, 183, 92, 0.1);
+  color: var(--gold-lit);
+}
+
+@media (max-width: 720px) {
+  .today-commitment-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .today-commitments {
+    padding: 15px;
+  }
+
+  .today-commitments-title p {
+    display: none;
+  }
+
+  .today-commitment {
+    gap: 9px;
+  }
+}
+
 /* ---------- 오늘의 마을 (3D 디오라마) ---------- */
 /* 마을 탭에서만 보인다. 장식이 아니라 상태판이라 캡션이 숫자를 같이 읽어준다. */
 .village3d {
